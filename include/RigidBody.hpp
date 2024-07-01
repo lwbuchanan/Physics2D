@@ -2,19 +2,18 @@
 
 #include "Math.hpp"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 
-class Entity {
+class RigidBody {
 public:
-  Entity(Vector2f p_pos, SDL_Texture *p_texture);
-  Entity(Vector2f p_pos, float p_width, float p_height);
+  RigidBody(Vector2f p_pos, Vector2f p_vel, float p_width, float p_height);
   Vector2f &getPos() { return pos; }
-  SDL_Texture *getTexture() { return texture; }
+  Vector2f &getVel() { return vel; }
   SDL_Rect &getCurrentFrame() { return currentFrame; }
   void updateFrame();
+  void updatePhysics(Vector2f force, float dt);
 
 private:
   Vector2f pos;
+  Vector2f vel;
   SDL_Rect currentFrame;
-  SDL_Texture *texture;
 };
