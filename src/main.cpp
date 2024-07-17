@@ -26,48 +26,42 @@ int main(int argc, char *argv[]) {
   // window.loadTexture("res/gfx/ground_grass_1.png");
   std::vector<RigidBody> objects = {};
   {
-    RigidBody rb(Vector2f(100, 100), Vector2f(5, 5), 100, 100);
+    RigidBody rb(Vector2f(300, 500), Vector2f(10, 0), 50, 100);
+    RigidBody rb2(Vector2f(600, 600), Vector2f(-5, 0), 50, 100);
     objects.push_back(rb);
+    objects.push_back(rb2);
   }
 
   bool gameRunning = true;
   SDL_Event event;
-
-  const float timeStep = 0.015f;
-  float accumulator = 0.0f;
-  float currentTime = utils::hireTimeInSeconds();
+  const float frameTime = FRAME_TIME;
 
   while (gameRunning) {
-    int startTicks = SDL_GetTicks();
-    float newTime = utils::hireTimeInSeconds();
-    float frameTime = newTime - currentTime;
-    currentTime = newTime;
-    accumulator += frameTime;
+    float startTime = utils::hireTimeInSeconds();
+    // int startTicks = SDL_GetTicks();
 
-    while (accumulator >= timeStep) {
-      while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT)
-          gameRunning = false;
-      }
-
-      accumulator -= timeStep;
+    // Check to see if the game is over
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT)
+        gameRunning = false;
     }
 
-    // const float alpha = accumulator / timeStep;
+    for (RigidBody &e : objects) {
+      e.updatePhysics(Vector2f(0, 0), frameTime);
+      e.checkCollisions(objects);
+    }
 
+    // Draw Everything
     window.clear();
     for (RigidBody &e : objects) {
       window.render(e);
     }
     window.display();
 
-    int frameTicks = SDL_GetTicks() - startTicks;
-    if (frameTicks < 1000 / window.getRefreshRate())
-      SDL_Delay(1000 / window.getRefreshRate());
+    SDL_Delay(startTime + frameTime - utils::hireTimeInSeconds());
   }
 
   window.cleanUp();
   SDL_Quit();
-
   return 0;
 }

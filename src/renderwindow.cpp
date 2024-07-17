@@ -1,7 +1,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <cstdint>
 #include <iostream>
 
+#include "../include/Defs.hpp"
 #include "../include/Entity.hpp"
 #include "../include/RenderWindow.hpp"
 #include "../include/RigidBody.hpp"
@@ -32,9 +34,44 @@ void RenderWindow::clear() {
   SDL_RenderClear(renderer);
 }
 
+void RenderDrawCircle(SDL_Renderer *renderer, Vector2f pos, int r) {
+  int32_t centreX = pos.x;
+  int32_t centreY = SCREEN_HEIGHT - pos.y;
+  const int32_t diameter = (r * 2);
+  int32_t x = (r - 1);
+  int32_t y = 0;
+  int32_t tx = 1;
+  int32_t ty = 1;
+  int32_t error = (tx - diameter);
+
+  while (x >= y) {
+    //  Each of the following renders an octant of the circle
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX + x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY - y);
+    SDL_RenderDrawPoint(renderer, centreX - x, centreY + y);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX + y, centreY + x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY - x);
+    SDL_RenderDrawPoint(renderer, centreX - y, centreY + x);
+
+    if (error <= 0) {
+      ++y;
+      error += ty;
+      ty += 2;
+    }
+
+    if (error > 0) {
+      --x;
+      tx += 2;
+      error += (tx - diameter);
+    }
+  }
+}
+
 void RenderWindow::render(RigidBody &p_rigidBody) {
   SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-  SDL_RenderDrawRect(renderer, &p_rigidBody.getCurrentFrame());
+  RenderDrawCircle(renderer, p_rigidBody.getPos(), p_rigidBody.getRadius());
 }
 
 void RenderWindow::render(Entity &p_entity) {
