@@ -1,6 +1,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <cmath>
 #include <cstdio>
+#include <unistd.h>
 #include <vector>
 
 #include "../include/Defs.hpp"
@@ -16,11 +18,19 @@ RigidBody::RigidBody(Vector2f p_pos, Vector2f p_vel, float p_radius,
 // }
 
 bool RigidBody::collidesWithGround() { return pos.y < radius; }
+bool RigidBody::collidesWithCeiling() { return pos.y > SCREEN_HEIGHT - radius; }
 bool RigidBody::collidesWithLWall() { return pos.x < radius; }
 bool RigidBody::collidesWithRWall() { return pos.x > SCREEN_WIDTH - radius; }
-bool RigidBody::collidesWithRB(RigidBody &rb) {
-  return pos.diff(rb.pos).normSq() <
-         (radius + rb.radius) * (radius + rb.radius);
+bool RigidBody::collidesWithRB(RigidBody &rb, Vector2f &normal, float &depth) {
+  float dist = (pos - rb.pos).norm();
+  float radii = (radius + rb.radius);
+  normal = Vector2f();
+  depth = 0.0f;
+  if (radii >= dist)
+    return false;
+  normal = (rb.pos - pos).normalize();
+  depth = radii - dist;
+  return true;
 }
 
 void RigidBody::checkCollisions(std::vector<RigidBody> &rbs) {
@@ -29,40 +39,35 @@ void RigidBody::checkCollisions(std::vector<RigidBody> &rbs) {
     if (&rb == this) {
       continue;
     }
-    if (collidesWithRB(rb)) {
-      // Separate the objects
-
-      // Impart new velocity onto this rb
-      bounceOff(rb, 1);
-      // Do the same to the other rb
-      rb.bounceOff(*this, 1);
+    Vector2f normal;
+    float depth;
+    if (collidesWithRB(rb, normal, depth)) {
+      float restitution = 0.5f;
+      pos = pos - (normal * (depth / 2.0f));
+      rb.pos = rb.pos + (normal * (depth / 2.0f));
     }
   }
-}
-
-void RigidBody::bounceOff(RigidBody rb, float cR) {
-  vel = vel.sum(
-      pos.diff(rb.pos).scale((((1 + cR) * rb.mass) / (mass + rb.mass)) *
-                             ((vel.diff(rb.vel).dotProd(pos.diff(rb.pos))) /
-                              (pos.diff(rb.pos).normSq()))));
 }
 
 void RigidBody::updatePhysics(Vector2f force, float dt) {
   if (vel.y < 0 && collidesWithGround()) {
     pos.y = radius;
-    vel.y *= -0.6;
+    vel.y *= -1;
   }
 
-  vel.y -= 0.1;
+  if (vel.y > 0 && collidesWithCeiling()) {
+    pos.y = SCREEN_HEIGHT - radius;
+    vel.y *= -1;
+  }
 
   if (vel.x < 0 && collidesWithLWall()) {
     pos.x = radius;
-    vel.x *= -0.2;
+    vel.x *= -1;
   }
 
   if (vel.x > 0 && collidesWithRWall()) {
     pos.x = SCREEN_WIDTH - radius;
-    vel.x *= -0.2;
+    vel.x *= -1;
   }
 
   // Move body according to current velocity

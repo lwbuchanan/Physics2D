@@ -18,14 +18,15 @@ public:
   void checkCollisions(std::vector<RigidBody> &rbs);
   void bounceOff(RigidBody rb, float cr);
   bool collidesWithGround();
+  bool collidesWithCeiling();
   bool collidesWithLWall();
   bool collidesWithRWall();
-  bool collidesWithRB(RigidBody &rb);
+  bool collidesWithRB(RigidBody &rb, Vector2f &normal, float &depth);
 
 private:
   Vector2f pos;
   Vector2f vel;
-  float radius;
   float mass;
-  // SDL_Rect currentFrame;
+  float restitution;
+  float radius;
 };

@@ -19,15 +19,15 @@ int main(int argc, char *argv[]) {
     std::cout << "IMG_INIT FAILED: " << SDL_GetError() << std::endl;
   }
 
-  RenderWindow window("Game v1.0", SCREEN_WIDTH, SCREEN_HEIGHT);
+  RenderWindow window("Physics2D", SCREEN_WIDTH, SCREEN_HEIGHT);
   std::cout << window.getRefreshRate() << std::endl;
 
   // SDL_Texture *grassTexture =
   // window.loadTexture("res/gfx/ground_grass_1.png");
   std::vector<RigidBody> objects = {};
   {
-    RigidBody rb(Vector2f(300, 500), Vector2f(10, 0), 50, 100);
-    RigidBody rb2(Vector2f(600, 600), Vector2f(-5, 0), 50, 100);
+    RigidBody rb(Vector2f(300, 500), Vector2f(20, 0), 50, 500);
+    RigidBody rb2(Vector2f(600, 500), Vector2f(-10, 0), 50, 500);
     objects.push_back(rb);
     objects.push_back(rb2);
   }
