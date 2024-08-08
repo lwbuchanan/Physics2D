@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_render.h>
 #include <cstdint>
 #include <iostream>
 
@@ -30,7 +31,7 @@ SDL_Texture *RenderWindow::loadTexture(const char *p_filePath) {
 }
 
 void RenderWindow::clear() {
-  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  SDL_SetRenderDrawColor(renderer, 30, 30, 40, 255);
   SDL_RenderClear(renderer);
 }
 
@@ -70,7 +71,8 @@ void RenderDrawCircle(SDL_Renderer *renderer, Vector2f pos, int r) {
 }
 
 void RenderWindow::render(RigidBody &p_rigidBody) {
-  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  SDL_SetRenderDrawColor(renderer, p_rigidBody.color[0], p_rigidBody.color[1],
+                         p_rigidBody.color[2], p_rigidBody.color[3]);
   RenderDrawCircle(renderer, p_rigidBody.getPos(), p_rigidBody.getRadius());
 }
 
