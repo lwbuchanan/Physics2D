@@ -17,6 +17,17 @@ type Game struct {
 func (g *Game) Update() error {
 	x, y := ebiten.CursorPosition()
 	g.me.Move(physics.Vec2[float64]{X: float64(x), Y: float64(y)})
+	for i := 0; i < len(g.obj); i++ {
+		for j := 0; j < len(g.obj); j++ {
+			if g.obj[i] == g.obj[j] {
+				continue
+			}
+			collides, collision := g.obj[i].Collides(g.obj[j])
+			if collides {
+				println(collision)
+			}
+		}
+	}
 	return nil
 }
 
@@ -49,9 +60,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{10, 10, 20, 0xff})
 	ebitenutil.DebugPrint(screen, "Hello, World!")
 
-	var meCir *physics.Circle = g.me
-	drawCircle(screen, int(meCir.Pos.X), int(meCir.Pos.Y), int(meCir.Rad))
-
 	for i := 0; i < len(g.obj); i++ {
 		var cir *physics.Circle = g.obj[i]
 		drawCircle(screen, int(cir.Pos.X), int(cir.Pos.Y), int(cir.Rad))
@@ -64,8 +72,10 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 	var c1 *physics.Circle = physics.NewCircle(physics.Vec2[float64]{X: 100., Y: 100.}, 25)
+	var c2 *physics.Circle = physics.NewCircle(physics.Vec2[float64]{X: 50., Y: 50.}, 25)
 	var obj []*physics.Circle
-	//obj = append(obj, c1)
+	obj = append(obj, c1)
+	obj = append(obj, c2)
 
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Hello, World!")

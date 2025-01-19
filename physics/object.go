@@ -1,13 +1,15 @@
 package physics
 
-import "math"
+import (
+	"math"
+)
 
 type AABB struct {
-	min, max Vec2[float64]
+	Min, Max Vec2[float64]
 }
 
 type Circle struct {
-	box AABB
+	Box AABB
 	Pos Vec2[float64]
 	Rad float64
 }
@@ -19,14 +21,19 @@ func NewCircle(Pos Vec2[float64], Rad float64) *Circle {
 }
 
 func (o *Circle) Move(newPos Vec2[float64]) {
+	disp := o.Pos.Sub(newPos)
 	o.Pos = newPos
+	o.Box.Min.Add(disp)
+	o.Box.Max.Add(disp)
 }
 
-func (a *Circle) collides(b *Circle) (bool, *Collision) {
+func (a *Circle) Collides(b *Circle) (bool, *Collision) {
 
-	if a.box.min.Greater(b.box.max) || a.box.max.Less(b.box.min) {
+	if a.Box.Min.GreaterEq(b.Box.Max) || a.Box.Max.LessEq(b.Box.Min) {
+		println("Boxes not collided")
 		return false, nil
 	}
+	println("Boxes collided")
 
 	bothRad := a.Rad + b.Rad
 	displacement := a.Pos.Sub(b.Pos)
