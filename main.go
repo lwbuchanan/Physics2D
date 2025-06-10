@@ -1,85 +1,61 @@
 package main
 
 import (
-	"image/color"
-	"log"
+	"fmt"
 
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/lwbuchanan/Physics2D/physics"
+	rl "github.com/gen2brain/raylib-go/raylib"
+	p2d "github.com/lwbuchanan/Physics2D/physics"
 )
 
-type Game struct {
-	me  *physics.Circle
-	obj []*physics.Circle
-}
-
-func (g *Game) Update() error {
-	x, y := ebiten.CursorPosition()
-	g.me.Move(physics.Vec2[float64]{X: float64(x), Y: float64(y)})
-	for i := 0; i < len(g.obj); i++ {
-		for j := 0; j < len(g.obj); j++ {
-			if g.obj[i] == g.obj[j] {
-				continue
-			}
-			collides, collision := g.obj[i].Collides(g.obj[j])
-			if collides {
-				println(collision)
-			}
-		}
-	}
-	return nil
-}
-
-func drawCircle(image *ebiten.Image, x_center int, y_center int, radius int) {
-	x := 0
-	y := radius
-	d := 3 - 2*radius
-
-	for x <= y {
-		image.Set(x_center+x, y_center+y, color.White)
-		image.Set(x_center-x, y_center+y, color.White)
-		image.Set(x_center+x, y_center-y, color.White)
-		image.Set(x_center-x, y_center-y, color.White)
-		image.Set(x_center+y, y_center+x, color.White)
-		image.Set(x_center-y, y_center+x, color.White)
-		image.Set(x_center+y, y_center-x, color.White)
-		image.Set(x_center-y, y_center-x, color.White)
-
-		if d < 0 {
-			d += 4*x + 6
-		} else {
-			d += 4*(x-y) + 10
-			y -= 1
-		}
-		x += 1
-	}
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{10, 10, 20, 0xff})
-	ebitenutil.DebugPrint(screen, "Hello, World!")
-
-	for i := 0; i < len(g.obj); i++ {
-		var cir *physics.Circle = g.obj[i]
-		drawCircle(screen, int(cir.Pos.X), int(cir.Pos.Y), int(cir.Rad))
-	}
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 240
-}
-
 func main() {
-	var c1 *physics.Circle = physics.NewCircle(physics.Vec2[float64]{X: 100., Y: 100.}, 25)
-	var c2 *physics.Circle = physics.NewCircle(physics.Vec2[float64]{X: 50., Y: 50.}, 25)
-	var obj []*physics.Circle
-	obj = append(obj, c1)
-	obj = append(obj, c2)
+	rl.InitWindow(800, 450, "Physics2D")
+	defer rl.CloseWindow()
 
-	ebiten.SetWindowSize(640, 480)
-	ebiten.SetWindowTitle("Hello, World!")
-	if err := ebiten.RunGame(&Game{c1, obj}); err != nil {
-		log.Fatal(err)
+	circle := p2d.NewCircle(p2d.Vec2{X: 400, Y: 225}, 20)
+	circle2 := p2d.NewCircle(p2d.Vec2{X: 200, Y: 100}, 20)
+	status := ""
+	c1status := ""
+	c2status := ""
+
+	rl.SetTargetFPS(60)
+	for !rl.WindowShouldClose() {
+
+		circle.Move(p2d.Vec2(rl.GetMousePosition()))
+
+		if collides, collision := circle.Collides(circle2); collides {
+			status = fmt.Sprintf("Normal: %.2v, Depth: %.2f", collision.Normal, collision.Depth)
+		} else {
+			status = "nothing going on"
+		}
+
+		c1status = fmt.Sprintf("C1: %d, %d", int32(circle.Pos.X), int32(circle.Pos.Y))
+		c2status = fmt.Sprintf("C2: %d, %d", int32(circle2.Pos.X), int32(circle2.Pos.Y))
+
+		// Draw
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.Black)
+
+		rl.DrawText(status, 10, 10, 20, rl.White)
+		rl.DrawText(c1status, 10, 30, 20, rl.White)
+		rl.DrawText(c2status, 10, 50, 20, rl.White)
+
+		rl.DrawCircle(int32(circle2.Pos.X), int32(circle2.Pos.Y), float32(circle2.Rad), rl.White)
+		rl.DrawCircle(int32(circle.Pos.X), int32(circle.Pos.Y), float32(circle.Rad), rl.Blue)
+		// drawAABB(circle2.Box)
+		// drawAABB(circle.Box)
+
+		rl.EndDrawing()
 	}
+
+	rl.CloseWindow()
+}
+
+func drawAABB(box p2d.AABB) {
+	rl.DrawRectangleLines(int32(box.Min.X), int32(box.Min.Y), int32(box.Max.X)-int32(box.Min.X), int32(box.Max.Y)-int32(box.Min.Y), rl.Yellow)
+	drawVec2(box.Min, rl.Blue)
+	drawVec2(box.Max, rl.Red)
+}
+
+func drawVec2(v p2d.Vec2, c rl.Color) {
+	rl.DrawLine(0, 0, int32(v.X), int32(v.Y), c)
 }
