@@ -4,43 +4,57 @@ import (
 	"math"
 )
 
-type AABB struct {
-	Min, Max Vec2
+type Body interface {
+	GetPos() Vec2
+	SetPos(pos Vec2)
+	GetVel() Vec2
+	SetVel(vel Vec2)
+	GetRest() float32
+	GetInvMass() float32
+
+	UpdatePos(dt float32)
+	Push(displacement Vec2)
+	Collides(b Body)
 }
 
+// Units are m, m/s, and kg
 type Circle struct {
-	Box AABB
-	Pos Vec2
-	Rad float32
+	Rad     float32
+	Pos     Vec2
+	Vel     Vec2
+	Rest    float32
+	invMass float32
 }
 
-func NewCircle(Pos Vec2, Rad float32) *Circle {
-	rvec := Vec2{Rad, Rad}
-	box := AABB{Pos.Sub(rvec), Pos.Add(rvec)}
-	return &Circle{box, Pos, Rad}
+// Units are m, m/s, and kg
+func NewCircle(pos Vec2, rad float32, mass float32) *Circle {
+	return &Circle{
+		Rad:     rad,
+		Pos:     pos,
+		Vel:     Vec2{0, 0},
+		Rest:    1.0,
+		invMass: 1.0 / mass,
+	}
 }
 
+func (o *Circle) GetPos() Vec2 {
+	return o.Pos
+}
 func (o *Circle) SetPos(newPos Vec2) {
-	disp := newPos.Sub(o.Pos)
 	o.Pos = newPos
-	o.Box.Min = o.Box.Min.Add(disp)
-	o.Box.Max = o.Box.Max.Add(disp)
+}
+
+// Move by vel*dt meters
+func (o *Circle) UpdatePosition(dt float32) {
+	displacement := o.Vel.ScaleMult(dt)
+	o.Push(displacement)
 }
 
 func (o *Circle) Push(displacement Vec2) {
 	o.Pos = o.Pos.Add(displacement)
-	o.Box.Min = o.Box.Min.Add(displacement)
-	o.Box.Max = o.Box.Max.Add(displacement)
 }
 
 func (a *Circle) Collides(b *Circle) (bool, *Collision) {
-
-	if (a.Box.Max.X < b.Box.Min.X || a.Box.Min.X > b.Box.Max.X) ||
-		(a.Box.Max.Y < b.Box.Min.Y || a.Box.Min.Y > b.Box.Max.Y) {
-		// println("Boxes not collided")
-		return false, nil
-	}
-
 	bothRad := a.Rad + b.Rad
 	displacement := a.Pos.Sub(b.Pos)
 	distSquared := displacement.LengthSquared()
