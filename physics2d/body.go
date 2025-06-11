@@ -1,4 +1,4 @@
-package physics
+package physics2d
 
 import (
 	"math"
@@ -20,11 +20,17 @@ func NewCircle(Pos Vec2, Rad float32) *Circle {
 	return &Circle{box, Pos, Rad}
 }
 
-func (o *Circle) Move(newPos Vec2) {
+func (o *Circle) SetPos(newPos Vec2) {
 	disp := newPos.Sub(o.Pos)
 	o.Pos = newPos
 	o.Box.Min = o.Box.Min.Add(disp)
 	o.Box.Max = o.Box.Max.Add(disp)
+}
+
+func (o *Circle) Push(displacement Vec2) {
+	o.Pos = o.Pos.Add(displacement)
+	o.Box.Min = o.Box.Min.Add(displacement)
+	o.Box.Max = o.Box.Max.Add(displacement)
 }
 
 func (a *Circle) Collides(b *Circle) (bool, *Collision) {
@@ -56,11 +62,4 @@ func (a *Circle) Collides(b *Circle) (bool, *Collision) {
 
 	// println("Boxes collided, circles overlapping")
 	return true, &Collision{a, b, normal, depth}
-}
-
-type Collision struct {
-	a      *Circle
-	b      *Circle
-	Normal Vec2
-	Depth  float32
 }
