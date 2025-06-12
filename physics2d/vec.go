@@ -47,7 +47,7 @@ func (v1 Vec2) Cross(v2 Vec2) float64 {
 	return v1.x*v2.y - v1.y*v2.x
 }
 
-func (v Vec2) Transform(t Transform) Vec2 {
+func (v Vec2) Transform(t transform) Vec2 {
 	rx := v.x*t.Cos - v.y*t.Sin
 	ry := v.x*t.Sin + v.y*t.Cos
 	// Rotate THEN translate

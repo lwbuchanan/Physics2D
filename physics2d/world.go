@@ -1,21 +1,26 @@
 package physics2d
 
+// Technically, the game could manage all the physiscs objects on
+// its own, but its convenient to have the physics world take care
+// of updating itself. This means also means we can store global
+// physics properties that affect all objects like gravity.
 type World struct {
-	numBodies  int
 	Bodies     []*Body
 	dimensions Vec2
+	gravity    float64 // m/s/s
 }
 
-func NewWorld(numBodies int, bodies []*Body, dimensions Vec2) World {
-	return World{numBodies: numBodies, Bodies: bodies, dimensions: dimensions}
+func NewWorld(bodies []*Body, dimensions Vec2, gravity float64) World {
+	return World{Bodies: bodies, dimensions: dimensions, gravity: gravity}
 }
 
+// Call this every physics tick
 func (w World) UpdatePhysics(dt float64) {
 	for i := 0; i < len(w.Bodies); i++ {
 		b1 := w.Bodies[i]
 
 		// Update position
-		// b1.Vel.Y -= 2.5
+		// b1.Velocity -= w.gravity * dt
 		b1.Update(dt)
 
 		// Push collided balls apart
@@ -31,7 +36,7 @@ func (w World) UpdatePhysics(dt float64) {
 					collision.Resolve()
 				}
 			} else if (b1.Shape == Ball && b2.Shape == Box) || (b1.Shape == Box && b2.Shape == Ball) {
-				if collides, collision := BallAndBoxCollide(b1, b2); collides {
+				if collides, collision := BallAndPolygonCollide(b1, b2); collides {
 					collision.Resolve()
 				}
 			}
@@ -39,17 +44,17 @@ func (w World) UpdatePhysics(dt float64) {
 		}
 
 		// For now, keep ball in bounds
-		if b1.Position.Y()-b1.Radius <= 0 {
-			b1.Position = (Vec2{b1.Position.X(), b1.Radius})
+		if b1.Position.y-b1.Dimensions.y/2 <= 0 {
+			b1.Position = (Vec2{b1.Position.x, b1.Dimensions.y / 2})
 		}
-		if b1.Position.Y()+b1.Radius >= w.dimensions.Y() {
-			b1.Position = (Vec2{b1.Position.X(), w.dimensions.Y() - b1.Radius})
+		if b1.Position.y+b1.Dimensions.y/2 >= w.dimensions.y {
+			b1.Position = (Vec2{b1.Position.x, w.dimensions.y - b1.Dimensions.y/2})
 		}
-		if b1.Position.X()-b1.Radius <= 0 {
-			b1.Position = (Vec2{b1.Radius, b1.Position.Y()})
+		if b1.Position.x-b1.Dimensions.x/2 <= 0 {
+			b1.Position = (Vec2{b1.Dimensions.x / 2, b1.Position.y})
 		}
-		if b1.Position.X()+b1.Radius >= w.dimensions.X() {
-			b1.Position = (Vec2{w.dimensions.X() - b1.Radius, b1.Position.Y()})
+		if b1.Position.x+b1.Dimensions.x/2 >= w.dimensions.X() {
+			b1.Position = (Vec2{w.dimensions.x - b1.Dimensions.x/2, b1.Position.Y()})
 		}
 	}
 }
