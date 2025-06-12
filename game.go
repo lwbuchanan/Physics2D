@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -10,31 +10,31 @@ import (
 )
 
 const (
-	worldWidth  float32 = float32(WindowWidth) * MetersPerPixel
-	worldHeight float32 = float32(WindowHeight) * MetersPerPixel
+	worldWidth  float64 = float64(WindowWidth) * MetersPerPixel
+	worldHeight float64 = float64(WindowHeight) * MetersPerPixel
 )
 
 type CircleGame struct {
 	Name         string
 	physicsWorld p2d.World
-	player       *p2d.Circle
+	player       *p2d.Body
 }
 
 func NewCircleGame(name string, numCircles int, hasPlayer bool) CircleGame {
 
-	circles := make([]*p2d.Circle, numCircles)
+	circles := make([]*p2d.Body, numCircles)
 
 	for i := range numCircles {
-		circles[i] = p2d.NewCircle(
+		circles[i] = p2d.NewBall(
 			p2d.NewVec2(
-				rand.Float32()*(worldWidth-0),
-				rand.Float32()*(worldHeight-0)),
-			1+rand.Float32()*(3), 5)
+				rand.Float64()*(worldWidth-0),
+				rand.Float64()*(worldHeight-0)),
+			1+rand.Float64()*(3), 1, 5)
 	}
 
-	var me *p2d.Circle = nil
+	var me *p2d.Body = nil
 	if hasPlayer {
-		me = p2d.NewCircle(p2d.NewVec2(worldWidth/2, worldHeight/2), 2, 5)
+		me = p2d.NewBall(p2d.NewVec2(worldWidth/2, worldHeight/2), 2, 1, 5)
 		circles[0] = me
 	}
 
@@ -53,14 +53,15 @@ func NewCircleGame(name string, numCircles int, hasPlayer bool) CircleGame {
 	return newGame
 }
 
-func (g CircleGame) UpdatePhysics(dt float32) {
-
-	g.physicsWorld.UpdatePhysics(dt)
+func (g CircleGame) UpdatePhysics(dt float64) {
 
 	if g.player != nil {
 		mousePos := toP2dVec(rl.GetMousePosition())
-		g.player.SetPos(mousePos)
+		g.player.Position = (mousePos)
 	}
+
+	g.physicsWorld.UpdatePhysics(dt)
+
 }
 
 func (g CircleGame) Draw() {
@@ -68,20 +69,20 @@ func (g CircleGame) Draw() {
 
 	rl.ClearBackground(rl.NewColor(13, 27, 42, 255))
 
-	for i := range len(g.physicsWorld.Circles) {
-		circle := g.physicsWorld.Circles[i]
-		rl.DrawCircleV(toRLVec(circle.Pos),
-			circle.Rad*PixelsPerMeter,
+	for i := range len(g.physicsWorld.Bodies) {
+		circle := g.physicsWorld.Bodies[i]
+		rl.DrawCircleV(toRLVec(circle.Position),
+			float32(circle.Radius*PixelsPerMeter),
 			rl.NewColor(119, 141, 169, 255))
 	}
 
 	if g.player != nil {
-		rl.DrawCircleV(toRLVec(g.player.Pos),
-			g.player.Rad*PixelsPerMeter,
+		rl.DrawCircleV(toRLVec(g.player.Position),
+			float32(g.player.Radius*PixelsPerMeter),
 			rl.NewColor(224, 225, 221, 255))
 	}
 
-	mestr := fmt.Sprintf("%.1f, %.1f", g.player.Pos.X(), g.player.Pos.Y())
+	mestr := fmt.Sprintf("%.1f, %.1f", g.player.Position.X(), g.player.Position.Y())
 	rl.DrawText(strconv.Itoa(int(rl.GetFPS())), WindowWidth-50, 10, 24, rl.NewColor(255, 240, 124, 255))
 	rl.DrawText(mestr, 10, 10, 24, rl.NewColor(255, 240, 124, 255))
 	rl.EndDrawing()
@@ -89,14 +90,14 @@ func (g CircleGame) Draw() {
 
 func toRLVec(v p2d.Vec2) rl.Vector2 {
 	return rl.Vector2{
-		X: v.X() * PixelsPerMeter,
-		Y: (worldHeight - v.Y()) * PixelsPerMeter,
+		X: float32(v.X() * PixelsPerMeter),
+		Y: float32((worldHeight - v.Y()) * PixelsPerMeter),
 	}
 }
 
 func toP2dVec(v rl.Vector2) p2d.Vec2 {
 	return p2d.NewVec2(
-		v.X*MetersPerPixel,
-		(float32(WindowHeight)-v.Y)*MetersPerPixel,
+		float64(v.X)*MetersPerPixel,
+		(float64(WindowHeight)-float64(v.Y))*MetersPerPixel,
 	)
 }

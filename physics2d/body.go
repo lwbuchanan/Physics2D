@@ -1,79 +1,79 @@
 package physics2d
 
-import (
-	"math"
+type BodyShape uint8
+
+const (
+	Ball BodyShape = iota
+	Box
+	Polygon
 )
 
-type Body interface {
-	GetPos() Vec2
-	SetPos(pos Vec2)
-	GetVel() Vec2
-	SetVel(vel Vec2)
-	GetRest() float32
-	GetInvMass() float32
+type Body struct {
+	// Shape
+	Shape               BodyShape // Ball, Box, Polygon
+	Dimensions          Vec2      // m
+	Vertices            []Vec2    // m
+	TransformedVertices []Vec2    // m
+	Radius              float64   // m
 
-	UpdatePos(dt float32)
-	Push(displacement Vec2)
-	Collides(b Body)
+	// Physics
+	Position           Vec2    // m
+	Velocity           Vec2    // m/s
+	Rotation           float64 // rad
+	RotationalVelocity float64 // rad/s
+	Restitution        float64 // 0..1
+	InverseMass        float64 // 1/kg
 }
 
-// Units are m, m/s, and kg
-type Circle struct {
-	Rad     float32
-	Pos     Vec2
-	Vel     Vec2
-	Rest    float32
-	invMass float32
-}
+func NewBall(pos Vec2, rad float64, rest float64, mass float64) *Body {
+	return &Body{
+		Shape:               Ball,
+		Radius:              rad,
+		Vertices:            nil,
+		TransformedVertices: nil,
 
-// Units are m, m/s, and kg
-func NewCircle(pos Vec2, rad float32, mass float32) *Circle {
-	return &Circle{
-		Rad:     rad,
-		Pos:     pos,
-		Vel:     Vec2{0, 0},
-		Rest:    1.0,
-		invMass: 1.0 / mass,
+		Position:           pos,
+		Velocity:           Vec2{0, 0},
+		Rotation:           0,
+		RotationalVelocity: 0,
+		Restitution:        rest,
+		InverseMass:        1.0 / mass,
 	}
 }
 
-func (o *Circle) GetPos() Vec2 {
-	return o.Pos
+func NewBox(pos Vec2, dim Vec2, rest float64, mass float64) *Body {
+	return &Body{
+		Shape:               Box,
+		Radius:              0,
+		Vertices:            boxVertieces(dim),
+		TransformedVertices: make([]Vec2, 4),
+
+		Position:    pos,
+		Velocity:    Vec2{0, 0},
+		Restitution: rest,
+		InverseMass: 1.0 / mass,
+	}
 }
-func (o *Circle) SetPos(newPos Vec2) {
-	o.Pos = newPos
+
+func boxVertieces(dim Vec2) []Vec2 {
+	l := -dim.x / 2
+	r := l + dim.x
+	b := -dim.y / 2
+	t := b + dim.y
+	return []Vec2{
+		{l, t}, // Top left
+		{r, t}, // Top right
+		{r, b}, // Bottom right
+		{l, b}, // Bottom left
+	}
 }
 
 // Move by vel*dt meters
-func (o *Circle) UpdatePosition(dt float32) {
-	displacement := o.Vel.ScaleMult(dt)
-	o.Push(displacement)
+func (b *Body) Update(dt float64) {
+	displacement := b.Velocity.ScaleMult(dt)
+	b.Move(displacement)
 }
 
-func (o *Circle) Push(displacement Vec2) {
-	o.Pos = o.Pos.Add(displacement)
-}
-
-func (a *Circle) Collides(b *Circle) (bool, *Collision) {
-	bothRad := a.Rad + b.Rad
-	displacement := a.Pos.Sub(b.Pos)
-	distSquared := displacement.LengthSquared()
-
-	if distSquared > (bothRad * bothRad) {
-		// println("Boxes collided, no actual collision")
-		return false, nil
-	}
-
-	distance := float32(math.Sqrt(float64(distSquared)))
-
-	if distance == 0 {
-		// println("Boxes collided, circles overlapping perfectly")
-		return true, &Collision{a, b, Vec2{1.0, 0.0}, a.Rad}
-	}
-
-	depth := distance - (a.Rad + b.Rad)
-	normal := displacement.ScaleDivide(distance)
-
-	// println("Boxes collided, circles overlapping")
-	return true, &Collision{a, b, normal, depth}
+func (b *Body) Move(displacement Vec2) {
+	b.Position = b.Position.Add(displacement)
 }

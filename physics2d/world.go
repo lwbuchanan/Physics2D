@@ -1,44 +1,55 @@
 package physics2d
 
 type World struct {
-	numCirlces int
-	Circles    []*Circle
+	numBodies  int
+	Bodies     []*Body
 	dimensions Vec2
 }
 
-func NewWorld(numCircles int, circles []*Circle, dimensions Vec2) World {
-	return World{numCirlces: numCircles, Circles: circles, dimensions: dimensions}
+func NewWorld(numBodies int, bodies []*Body, dimensions Vec2) World {
+	return World{numBodies: numBodies, Bodies: bodies, dimensions: dimensions}
 }
 
-func (w World) UpdatePhysics(dt float32) {
-	for i := 0; i < len(w.Circles); i++ {
-		c1 := w.Circles[i]
+func (w World) UpdatePhysics(dt float64) {
+	for i := 0; i < len(w.Bodies); i++ {
+		b1 := w.Bodies[i]
 
 		// Update position
-		// c1.Vel.Y -= 2.5
-		c1.UpdatePosition(dt)
+		// b1.Vel.Y -= 2.5
+		b1.Update(dt)
 
 		// Push collided balls apart
-		for j := i + 1; j < len(w.Circles); j++ {
-			c2 := w.Circles[j]
+		for j := i + 1; j < len(w.Bodies); j++ {
+			b2 := w.Bodies[j]
 
-			if collides, collision := c1.Collides(c2); collides {
-				collision.Resolve()
+			if b1.Shape == Ball && b2.Shape == Ball {
+				if collides, collision := BallsCollide(b1, b2); collides {
+					collision.Resolve()
+				}
+			} else if b1.Shape == Box && b2.Shape == Box {
+				if collides, collision := BoxesCollide(b1, b2); collides {
+					collision.Resolve()
+				}
+			} else if (b1.Shape == Ball && b2.Shape == Box) || (b1.Shape == Box && b2.Shape == Ball) {
+				if collides, collision := BallAndBoxCollide(b1, b2); collides {
+					collision.Resolve()
+				}
 			}
+
 		}
 
 		// For now, keep ball in bounds
-		if c1.Pos.Y()-c1.Rad <= 0 {
-			c1.SetPos(Vec2{c1.Pos.X(), c1.Rad})
+		if b1.Position.Y()-b1.Radius <= 0 {
+			b1.Position = (Vec2{b1.Position.X(), b1.Radius})
 		}
-		if c1.Pos.Y()+c1.Rad >= w.dimensions.Y() {
-			c1.SetPos(Vec2{c1.Pos.X(), w.dimensions.Y() - c1.Rad})
+		if b1.Position.Y()+b1.Radius >= w.dimensions.Y() {
+			b1.Position = (Vec2{b1.Position.X(), w.dimensions.Y() - b1.Radius})
 		}
-		if c1.Pos.X()-c1.Rad <= 0 {
-			c1.SetPos(Vec2{c1.Rad, c1.Pos.Y()})
+		if b1.Position.X()-b1.Radius <= 0 {
+			b1.Position = (Vec2{b1.Radius, b1.Position.Y()})
 		}
-		if c1.Pos.X()+c1.Rad >= w.dimensions.X() {
-			c1.SetPos(Vec2{w.dimensions.X() - c1.Rad, c1.Pos.Y()})
+		if b1.Position.X()+b1.Radius >= w.dimensions.X() {
+			b1.Position = (Vec2{w.dimensions.X() - b1.Radius, b1.Position.Y()})
 		}
 	}
 }
