@@ -65,6 +65,7 @@ func BoxesCollide(a, b *Body) (bool, *Collision) {
 func PolygonsCollide(a, b *Body) (bool, *Collision) {
 	normal := ZeroVec2()
 	depth := math.MaxFloat64
+	depthIsNegative := false
 
 	aVertices := a.Vertices()
 	bVertices := b.Vertices()
@@ -84,10 +85,18 @@ func PolygonsCollide(a, b *Body) (bool, *Collision) {
 			return false, nil
 		}
 
-		axisDepth := math.Min(aMax-bMin, bMax-aMin)
+		negative := false
+		var axisDepth float64
+		if aMax-bMin < bMax-aMin {
+			axisDepth = aMax - bMin
+		} else {
+			axisDepth = bMax - aMin
+			negative = true
+		}
 		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
+			depthIsNegative = negative
 		}
 	}
 
@@ -105,14 +114,25 @@ func PolygonsCollide(a, b *Body) (bool, *Collision) {
 			return false, nil
 		}
 
-		axisDepth := math.Min(aMax-bMin, bMax-aMin)
+		negative := false
+		var axisDepth float64
+		if aMax-bMin < bMax-aMin {
+			axisDepth = aMax - bMin
+		} else {
+			axisDepth = bMax - aMin
+			negative = true
+		}
 		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
+			depthIsNegative = negative
 		}
 	}
 
 	depth /= normal.Length()
+	if depthIsNegative {
+		depth = -depth
+	}
 	normal = normal.Normalize()
 	return true, &Collision{a, b, normal, depth}
 }

@@ -133,7 +133,6 @@ func NewBoxGame(numBoxes int, hasPlayer bool) BoxGame {
 		box, err := p2d.NewBox(
 			getRandomPosition(),   // Position
 			getRandomVector(2, 8), // Size
-			// getRandomFloat(-math.Pi, math.Pi), // Rotational Velocity
 			0,
 			1, // Resitution
 			5) // Mass
