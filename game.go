@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
+	"math"
 	"math/rand/v2"
 	"strconv"
 
@@ -121,37 +122,49 @@ func (g CircleGame) Draw() {
 	rl.EndDrawing()
 }
 
-type BoxGame struct {
+type BoxesAndBallsGame struct {
 	physicsWorld p2d.World
 	hasPlayer    bool
 }
 
-func NewBoxGame(numBoxes int, hasPlayer bool) BoxGame {
-	boxes := make([]*p2d.Body, numBoxes)
-	for i := range numBoxes {
+func NewBoxesAndBallGame(numBodies int, hasPlayer bool) BoxesAndBallsGame {
+	bodies := make([]*p2d.Body, numBodies)
+	for i := range numBodies {
+		var err error
+		var body *p2d.Body
+		if rand.IntN(2) == 0 {
+			body, err = p2d.NewBox(
+				getRandomPosition(),               // Position
+				getRandomVector(2, 8),             // Size
+				getRandomFloat(-math.Pi, math.Pi), // Rotation Velocity
+				1,                                 // Resitution
+				5)                                 // Mass
+		} else {
+			body, err = p2d.NewBall(
+				getRandomPosition(),  // Position
+				getRandomFloat(1, 4), // Size
+				1,                    // Resitution
+				5)                    // Mass
+		}
 
-		box, err := p2d.NewBox(
-			getRandomPosition(),   // Position
-			getRandomVector(2, 8), // Size
-			0,
-			1, // Resitution
-			5) // Mass
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}
-		boxes[i] = box
+		bodies[i] = body
 	}
 
-	newGame := BoxGame{
-		p2d.NewWorld(boxes, p2d.NewVec2(worldWidth, worldHeight), 0),
+	newGame := BoxesAndBallsGame{
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 0),
 		hasPlayer,
 	}
+
+	rl.SetWindowTitle("Raylib - Boxs and Ball")
 
 	return newGame
 }
 
-func (g BoxGame) Update(dt float64) {
+func (g BoxesAndBallsGame) Update(dt float64) {
 
 	if g.hasPlayer {
 		mousePos := toP2dVec(rl.GetMousePosition())
@@ -162,20 +175,27 @@ func (g BoxGame) Update(dt float64) {
 
 }
 
-func (g BoxGame) Draw() {
+func (g BoxesAndBallsGame) Draw() {
 	rl.BeginDrawing()
 
 	rl.ClearBackground(backgroundColor)
 
 	for i := range g.physicsWorld.Bodies {
-		box := g.physicsWorld.Bodies[i]
 		color := objectColor
 		if i == 0 && g.hasPlayer {
 			color = playerColor
 		}
-		err := drawConnectedVertices(box.Vertices(), 2, color)
-		if err != nil {
-			fmt.Println(err.Error())
+
+		body := g.physicsWorld.Bodies[i]
+		if body.Shape == p2d.Box {
+			err := drawConnectedVertices(body.Vertices(), 2, color)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		} else if body.Shape == p2d.Ball {
+			rl.DrawCircleV(toRLVec(body.Position),
+				float32(body.Radius*PixelsPerMeter),
+				color)
 		}
 	}
 
@@ -184,6 +204,7 @@ func (g BoxGame) Draw() {
 	rl.DrawText(mestr, 10, 10, 24, textColor)
 	rl.EndDrawing()
 }
+
 func toRLVec(v p2d.Vec2) rl.Vector2 {
 	return rl.Vector2{
 		X: float32(v.X() * PixelsPerMeter),

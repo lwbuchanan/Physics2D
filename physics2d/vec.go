@@ -62,12 +62,23 @@ func (v Vec2) LengthSquared() float64 {
 	return v.x*v.x + v.y*v.y
 }
 
-// Uses sqrt, try not to use
-func (v Vec2) Length() float64 {
-	return float64(math.Sqrt(float64(v.LengthSquared())))
+func (v1 Vec2) DistanceSquared(v2 Vec2) float64 {
+	xDist := v2.x - v1.x
+	yDist := v2.y - v1.y
+	return xDist*xDist + yDist*yDist
 }
 
-// Uses sqrt, try not to use
+// Uses sqrt, use DistanceSquared if possible
+func (v1 Vec2) Distance(v2 Vec2) float64 {
+	return math.Sqrt(v1.DistanceSquared(v2))
+}
+
+// Uses sqrt, use LengthSquared if possible
+func (v Vec2) Length() float64 {
+	return math.Sqrt(v.LengthSquared())
+}
+
+// Uses sqrt, avoid if possible
 func (v Vec2) Normalize() Vec2 {
 	return v.ScaleDivide(v.Length())
 }

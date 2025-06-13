@@ -27,20 +27,30 @@ func (w World) UpdatePhysics(dt float64) {
 		for j := i + 1; j < len(w.Bodies); j++ {
 			b2 := w.Bodies[j]
 
-			if b1.Shape == Ball && b2.Shape == Ball {
-				if collides, collision := BallsCollide(b1, b2); collides {
-					collision.Resolve()
+			switch b1.Shape {
+			case Ball:
+				switch b2.Shape {
+				case Ball:
+					if collides, collision := BallsCollide(b1, b2); collides {
+						collision.Resolve()
+					}
+				case Box:
+					if collides, collision := BallAndPolygonCollide(b1, b2); collides {
+						collision.Resolve()
+					}
 				}
-			} else if b1.Shape == Box && b2.Shape == Box {
-				if collides, collision := BoxesCollide(b1, b2); collides {
-					collision.Resolve()
-				}
-			} else if (b1.Shape == Ball && b2.Shape == Box) || (b1.Shape == Box && b2.Shape == Ball) {
-				if collides, collision := BallAndPolygonCollide(b1, b2); collides {
-					collision.Resolve()
+			case Box:
+				switch b2.Shape {
+				case Box:
+					if collides, collision := BoxesCollide(b1, b2); collides {
+						collision.Resolve()
+					}
+				case Ball:
+					if collides, collision := BallAndPolygonCollide(b2, b1); collides {
+						collision.Resolve()
+					}
 				}
 			}
-
 		}
 
 		// For now, keep ball in bounds
