@@ -124,10 +124,10 @@ func (g CircleGame) Draw() {
 
 type BoxesAndBallsGame struct {
 	physicsWorld p2d.World
-	hasPlayer    bool
+	mousePos     p2d.Vec2
 }
 
-func NewBoxesAndBallGame(numBodies int, hasPlayer bool) BoxesAndBallsGame {
+func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 	bodies := make([]*p2d.Body, numBodies)
 	for i := range numBodies {
 		var err error
@@ -136,7 +136,7 @@ func NewBoxesAndBallGame(numBodies int, hasPlayer bool) BoxesAndBallsGame {
 			body, err = p2d.NewBox(
 				getRandomPosition(),               // Position
 				getRandomVector(2, 8),             // Size
-				getRandomFloat(-math.Pi, math.Pi), // Rotation Velocity
+				getRandomFloat(-math.Pi, math.Pi), // Rotation
 				1,                                 // Resitution
 				5)                                 // Mass
 		} else {
@@ -155,8 +155,8 @@ func NewBoxesAndBallGame(numBodies int, hasPlayer bool) BoxesAndBallsGame {
 	}
 
 	newGame := BoxesAndBallsGame{
-		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 0),
-		hasPlayer,
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 5),
+		toP2dVec(rl.GetMousePosition()),
 	}
 
 	rl.SetWindowTitle("Raylib - Boxs and Ball")
@@ -166,10 +166,11 @@ func NewBoxesAndBallGame(numBodies int, hasPlayer bool) BoxesAndBallsGame {
 
 func (g BoxesAndBallsGame) Update(dt float64) {
 
-	if g.hasPlayer {
-		mousePos := toP2dVec(rl.GetMousePosition())
-		g.physicsWorld.Bodies[0].MoveTo(mousePos)
-	}
+	newMousePos := toP2dVec(rl.GetMousePosition())
+	mouseVel := newMousePos.Sub(g.mousePos).ScaleDivide(dt)
+	g.mousePos = newMousePos
+
+	g.physicsWorld.Bodies[0].Velocity = mouseVel
 
 	g.physicsWorld.UpdatePhysics(dt)
 
@@ -182,12 +183,12 @@ func (g BoxesAndBallsGame) Draw() {
 
 	for i := range g.physicsWorld.Bodies {
 		color := objectColor
-		if i == 0 && g.hasPlayer {
+		if i == 0 {
 			color = playerColor
 		}
 
 		body := g.physicsWorld.Bodies[i]
-		if body.Shape == p2d.Box {
+		if body.Shape == p2d.Polygon {
 			err := drawConnectedVertices(body.Vertices(), 2, color)
 			if err != nil {
 				fmt.Println(err.Error())

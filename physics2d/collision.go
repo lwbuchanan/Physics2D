@@ -1,11 +1,11 @@
 package physics2d
 
 import (
+	"fmt"
 	"math"
 )
 
 // Normal is in the a->b direction
-
 type Collision struct {
 	a      *Body
 	b      *Body
@@ -18,6 +18,28 @@ type Collision struct {
 func (c *Collision) Resolve() {
 	c.a.Move(c.normal.ScaleMult(-c.depth / 2))
 	c.b.Move(c.normal.ScaleMult(c.depth / 2))
+}
+
+func Collide(a, b *Body) (*Collision, error) {
+	switch a.Shape {
+	case Ball:
+		switch b.Shape {
+		case Ball:
+			return ballsCollide(a, b)
+		case Polygon:
+			return ballAndPolygonCollide(a, b)
+		}
+		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
+	case Polygon:
+		switch b.Shape {
+		case Polygon:
+			return polygonsCollide(a, b)
+		case Ball:
+			return ballAndPolygonCollide(b, a)
+		}
+		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
+	}
+	return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
 }
 
 // Gets the min and max of all points projected onto the axis
@@ -58,34 +80,29 @@ func closestVertexIdx(position Vec2, vertices []Vec2) int {
 	return closestIndex
 }
 
-func BallsCollide(a, b *Body) (bool, *Collision) {
+func ballsCollide(a, b *Body) (*Collision, error) {
 	bothRad := a.Radius + b.Radius
 	displacement := a.Position.Sub(b.Position)
 	distSquared := displacement.LengthSquared()
 
 	if distSquared > (bothRad * bothRad) {
-		return false, nil
+		return nil, nil
 	}
 
 	distance := math.Sqrt(distSquared)
 
 	if distance == 0 {
-		return true, &Collision{a, b, Vec2{1.0, 0.0}, a.Radius}
+		return &Collision{a, b, Vec2{1.0, 0.0}, a.Radius}, nil
 	}
 
 	depth := distance - (a.Radius + b.Radius)
 	normal := displacement.ScaleDivide(distance)
 
-	return true, &Collision{a, b, normal, depth}
-}
-
-func BoxesCollide(a, b *Body) (bool, *Collision) {
-	// TODO: Parallel axes can be skipped
-	return PolygonsCollide(a, b)
+	return &Collision{a, b, normal, depth}, nil
 }
 
 // SAT only works for convex polygons
-func PolygonsCollide(a, b *Body) (bool, *Collision) {
+func polygonsCollide(a, b *Body) (*Collision, error) {
 	normal := ZeroVec2()
 	depth := math.MaxFloat64
 
@@ -107,7 +124,7 @@ func PolygonsCollide(a, b *Body) (bool, *Collision) {
 
 		if aMin >= bMax || bMin >= aMax {
 			// Found separating axis
-			return false, nil
+			return nil, nil
 		}
 
 		// We need to eep track of the minimum non-separating axis, if a and b can't
@@ -142,7 +159,7 @@ func PolygonsCollide(a, b *Body) (bool, *Collision) {
 		bMin, bMax := projectVertecies(bVertices, axis)
 
 		if aMin >= bMax || bMin >= aMax {
-			return false, nil
+			return nil, nil
 		}
 
 		aPositiveDepth := aMax - bMin
@@ -162,15 +179,18 @@ func PolygonsCollide(a, b *Body) (bool, *Collision) {
 
 	}
 
-	return true, &Collision{a, b, normal, depth}
+	return &Collision{a, b, normal, depth}, nil
 }
 
-func BallAndPolygonCollide(ball, polygon *Body) (bool, *Collision) {
+func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 	vertices := polygon.Vertices()
 
 	normal := ZeroVec2()
 	depth := math.MaxFloat64
 
+	// This code is mostly the same as 2 polygons. Theres a lot of code duplication, but its
+	// tricky to make it more abstract while making sure that the normal still points in the
+	// right direction and everything.
 	for i := range len(vertices) {
 		vCurr := vertices[i]
 		vNext := vertices[(i+1)%len(vertices)]
@@ -182,7 +202,7 @@ func BallAndPolygonCollide(ball, polygon *Body) (bool, *Collision) {
 
 		if pMin >= bMax || bMin >= pMax {
 			// Found separating axis
-			return false, nil
+			return nil, nil
 		}
 
 		bPositiveDepth := bMax - pMin
@@ -210,7 +230,7 @@ func BallAndPolygonCollide(ball, polygon *Body) (bool, *Collision) {
 
 	if pMin >= bMax || bMin >= pMax {
 		// Found separating axis
-		return false, nil
+		return nil, nil
 	}
 
 	bPositiveDepth := bMax - pMin
@@ -228,5 +248,5 @@ func BallAndPolygonCollide(ball, polygon *Body) (bool, *Collision) {
 		normal = axis
 	}
 
-	return true, &Collision{ball, polygon, normal, depth}
+	return &Collision{ball, polygon, normal, depth}, nil
 }

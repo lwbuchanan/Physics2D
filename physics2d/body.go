@@ -8,7 +8,6 @@ type BodyShape uint8
 
 const (
 	Ball BodyShape = iota
-	Box
 	Polygon
 )
 
@@ -53,7 +52,7 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 	}, nil
 }
 
-func NewBox(position Vec2, dimensions Vec2, rotationalVelocity float64, restitution float64, mass float64) (*Body, error) {
+func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float64, mass float64) (*Body, error) {
 	if dimensions.x <= 0 || dimensions.y <= 0 {
 		return nil, errors.New("physics2d: box must have positive dimension")
 	}
@@ -64,7 +63,7 @@ func NewBox(position Vec2, dimensions Vec2, rotationalVelocity float64, restitut
 		return nil, errors.New("physics2d: box must have nonnegative mass")
 	}
 	return &Body{
-		Shape:               Box,
+		Shape:               Polygon,
 		Dimensions:          dimensions,
 		Radius:              dimensions.x / 2,
 		vertices:            boxVertieces(dimensions),
@@ -72,8 +71,8 @@ func NewBox(position Vec2, dimensions Vec2, rotationalVelocity float64, restitut
 		needTransformUpdate: true,
 		Position:            position,
 		Velocity:            Vec2{0, 0},
-		Rotation:            0,
-		RotationalVelocity:  rotationalVelocity,
+		Rotation:            rotation,
+		RotationalVelocity:  0,
 		Restitution:         restitution,
 		InverseMass:         1.0 / mass,
 	}, nil
@@ -108,10 +107,8 @@ func (b *Body) Vertices() []Vec2 {
 
 // Move by vel*dt meters and rotate by rvel*dt radians
 func (b *Body) Update(dt float64) {
-	displacement := b.Velocity.ScaleMult(dt)
-	rotationalDisplacement := b.RotationalVelocity * dt
-	b.Move(displacement)
-	b.Rotate(rotationalDisplacement)
+	b.Move(b.Velocity.ScaleMult(dt))
+	b.Rotate(b.RotationalVelocity * dt)
 }
 
 func (b *Body) Move(displacement Vec2) {

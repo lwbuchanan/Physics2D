@@ -1,5 +1,10 @@
 package physics2d
 
+import (
+	"fmt"
+	"os"
+)
+
 // Technically, the game could manage all the physiscs objects on
 // its own, but its convenient to have the physics world take care
 // of updating itself. This means also means we can store global
@@ -19,37 +24,20 @@ func (w World) UpdatePhysics(dt float64) {
 	for i := 0; i < len(w.Bodies); i++ {
 		b1 := w.Bodies[i]
 
-		// Update position
-		// b1.Velocity -= w.gravity * dt
+		// Update bodies
+		b1.Velocity.y -= w.gravity * dt
 		b1.Update(dt)
 
 		// Push collided balls apart
 		for j := i + 1; j < len(w.Bodies); j++ {
 			b2 := w.Bodies[j]
 
-			switch b1.Shape {
-			case Ball:
-				switch b2.Shape {
-				case Ball:
-					if collides, collision := BallsCollide(b1, b2); collides {
-						collision.Resolve()
-					}
-				case Box:
-					if collides, collision := BallAndPolygonCollide(b1, b2); collides {
-						collision.Resolve()
-					}
-				}
-			case Box:
-				switch b2.Shape {
-				case Box:
-					if collides, collision := BoxesCollide(b1, b2); collides {
-						collision.Resolve()
-					}
-				case Ball:
-					if collides, collision := BallAndPolygonCollide(b2, b1); collides {
-						collision.Resolve()
-					}
-				}
+			collision, err := Collide(b1, b2)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err.Error())
+			}
+			if collision != nil {
+				collision.Resolve()
 			}
 		}
 

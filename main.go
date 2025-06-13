@@ -33,5 +33,5 @@ func main() {
 }
 
 func createGame() Game {
-	return NewBoxesAndBallGame(10, true)
+	return NewBoxesAndBallGame(10)
 }
