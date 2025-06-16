@@ -124,7 +124,6 @@ func (g CircleGame) Draw() {
 
 type BoxesAndBallsGame struct {
 	physicsWorld p2d.World
-	mousePos     p2d.Vec2
 }
 
 func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
@@ -138,13 +137,13 @@ func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 				getRandomVector(2, 8),             // Size
 				getRandomFloat(-math.Pi, math.Pi), // Rotation
 				1,                                 // Resitution
-				5)                                 // Mass
+				0.5)                               // Mass
 		} else {
 			body, err = p2d.NewBall(
 				getRandomPosition(),  // Position
 				getRandomFloat(1, 4), // Size
 				1,                    // Resitution
-				5)                    // Mass
+				0.5)                  // Mass
 		}
 
 		if err != nil {
@@ -155,8 +154,7 @@ func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 	}
 
 	newGame := BoxesAndBallsGame{
-		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 5),
-		toP2dVec(rl.GetMousePosition()),
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 0),
 	}
 
 	rl.SetWindowTitle("Raylib - Boxs and Ball")
@@ -165,12 +163,24 @@ func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 }
 
 func (g BoxesAndBallsGame) Update(dt float64) {
-
-	newMousePos := toP2dVec(rl.GetMousePosition())
-	mouseVel := newMousePos.Sub(g.mousePos).ScaleDivide(dt)
-	g.mousePos = newMousePos
-
-	g.physicsWorld.Bodies[0].Velocity = mouseVel
+	if rl.IsKeyDown(rl.KeyA) {
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(-15, 0))
+	}
+	if rl.IsKeyDown(rl.KeyD) {
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(15, 0))
+	}
+	if rl.IsKeyDown(rl.KeyS) {
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, -15))
+	}
+	if rl.IsKeyDown(rl.KeyW) {
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, 15))
+	}
+	if rl.IsKeyDown(rl.KeyQ) {
+		g.physicsWorld.Bodies[0].ApplyTorque(10)
+	}
+	if rl.IsKeyDown(rl.KeyE) {
+		g.physicsWorld.Bodies[0].ApplyTorque(-10)
+	}
 
 	g.physicsWorld.UpdatePhysics(dt)
 
@@ -189,7 +199,7 @@ func (g BoxesAndBallsGame) Draw() {
 
 		body := g.physicsWorld.Bodies[i]
 		if body.Shape == p2d.Polygon {
-			err := drawConnectedVertices(body.Vertices(), 2, color)
+			err := drawPolygon(body.Vertices(), color)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
@@ -198,6 +208,8 @@ func (g BoxesAndBallsGame) Draw() {
 				float32(body.Radius*PixelsPerMeter),
 				color)
 		}
+		showVector := body.Velocity
+		rl.DrawLineEx(toRLVec(body.Position), toRLVec(body.Position.Add(showVector)), 2, textColor)
 	}
 
 	mestr := fmt.Sprintf("%.1f, %.1f", toP2dVec(rl.GetMousePosition()).X(), toP2dVec(rl.GetMousePosition()).Y())
@@ -235,7 +247,7 @@ func getRandomFloat(min float64, max float64) float64 {
 func drawConnectedVertices(vertices []p2d.Vec2, thickness float32, color color.RGBA) error {
 	numVertices := len(vertices)
 	if numVertices < 2 {
-		return errors.New("drawConnectedVertices(): not enough vertices")
+		return errors.New("drawConnectedVertices: not enough vertices")
 	}
 	for i := range numVertices {
 		rl.DrawLineEx(
@@ -244,5 +256,19 @@ func drawConnectedVertices(vertices []p2d.Vec2, thickness float32, color color.R
 			thickness,
 			color)
 	}
+	return nil
+}
+
+func drawPolygon(vertices []p2d.Vec2, color color.RGBA) error {
+	numVertices := len(vertices)
+	if numVertices < 3 {
+		return errors.New("drawPolygon: not enough vertices")
+	}
+	rlPoints := make([]rl.Vector2, numVertices)
+	for i, v := range vertices {
+		// raylib expects counter-clockwise vertex list
+		rlPoints[numVertices-1-i] = toRLVec(v)
+	}
+	rl.DrawTriangleFan(rlPoints, color)
 	return nil
 }

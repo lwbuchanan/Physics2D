@@ -24,9 +24,8 @@ func (w World) UpdatePhysics(dt float64) {
 	for i := 0; i < len(w.Bodies); i++ {
 		b1 := w.Bodies[i]
 
-		// Update bodies
-		b1.Velocity.y -= w.gravity * dt
-		b1.Update(dt)
+		// Accelerate due to gravity
+		b1.Acceleration.y -= w.gravity
 
 		// Push collided balls apart
 		for j := i + 1; j < len(w.Bodies); j++ {
@@ -40,6 +39,9 @@ func (w World) UpdatePhysics(dt float64) {
 				collision.Resolve()
 			}
 		}
+
+		// Resolve forces acting on body
+		b1.Update(dt)
 
 		// For now, keep ball in bounds
 		if b1.Position.y-b1.Dimensions.y/2 <= 0 {
