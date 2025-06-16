@@ -24,6 +24,10 @@ go.work.sum
 # env file
 .env
 
+# So absolutly done with this. Please just ignore the file i tell you to
 .vscode/*
+.vscode/**
+.vscode/**/*
 .vscode/launch.json
 launch.json
+*/launch.json
