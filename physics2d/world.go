@@ -27,7 +27,7 @@ func (w World) UpdatePhysics(dt float64) {
 		// Accelerate due to gravity
 		b1.acceleration.y -= w.gravity
 
-		// Push collided balls apart
+		// Check collisions
 		for j := i + 1; j < len(w.Bodies); j++ {
 			b2 := w.Bodies[j]
 
@@ -38,6 +38,11 @@ func (w World) UpdatePhysics(dt float64) {
 			if collision != nil {
 				collision.Resolve()
 			}
+		}
+
+		err := CollideWall(b1, w)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
 		}
 
 		// Resolve forces acting on body

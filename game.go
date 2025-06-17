@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PixelsPerMeter float64 = 10
+	PixelsPerMeter float64 = 200 // 1000 px world is 5 meters accross
 	MetersPerPixel float64 = 1.0 / PixelsPerMeter
 	worldWidth     float64 = float64(WindowWidth) * MetersPerPixel
 	worldHeight    float64 = float64(WindowHeight) * MetersPerPixel
@@ -28,7 +28,7 @@ const (
 var (
 	textColor       = rl.NewColor(255, 240, 124, 255)
 	playerColor     = rl.NewColor(224, 225, 221, 255)
-	objectColor     = rl.NewColor(119, 141, 169, 255)
+	objectColor     = rl.NewColor(119, 181, 169, 255)
 	backgroundColor = rl.NewColor(13, 27, 42, 255)
 )
 
@@ -134,16 +134,18 @@ func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 		if rand.IntN(2) == 0 {
 			body, err = p2d.NewBox(
 				getRandomPosition(),               // Position
-				getRandomVector(2, 8),             // Size
+				getRandomVector(.1, .5),           // Size
 				getRandomFloat(-math.Pi, math.Pi), // Rotation
-				1,                                 // Resitution
-				0.5)                               // Mass
+				0.2,                               // Resitution
+				0.5,                               // Mass
+			)
 		} else {
 			body, err = p2d.NewBall(
-				getRandomPosition(),  // Position
-				getRandomFloat(1, 4), // Size
-				1,                    // Resitution
-				0.5)                  // Mass
+				getRandomPosition(),     // Position
+				getRandomFloat(0.1, .2), // Size
+				0.2,                     // Resitution
+				0.5,                     // Mass
+			)
 		}
 
 		if err != nil {
@@ -164,22 +166,22 @@ func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 
 func (g BoxesAndBallsGame) Update(dt float64) {
 	if rl.IsKeyDown(rl.KeyA) {
-		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(-15, 0))
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(-2, 0))
 	}
 	if rl.IsKeyDown(rl.KeyD) {
-		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(15, 0))
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(2, 0))
 	}
 	if rl.IsKeyDown(rl.KeyS) {
-		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, -15))
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, -2))
 	}
 	if rl.IsKeyDown(rl.KeyW) {
-		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, 15))
+		g.physicsWorld.Bodies[0].ApplyForce(p2d.NewVec2(0, 2))
 	}
 	if rl.IsKeyDown(rl.KeyQ) {
-		g.physicsWorld.Bodies[0].ApplyTorque(10)
+		g.physicsWorld.Bodies[0].ApplyTorque(0.5)
 	}
 	if rl.IsKeyDown(rl.KeyE) {
-		g.physicsWorld.Bodies[0].ApplyTorque(-10)
+		g.physicsWorld.Bodies[0].ApplyTorque(-0.5)
 	}
 
 	g.physicsWorld.UpdatePhysics(dt)
@@ -191,13 +193,8 @@ func (g BoxesAndBallsGame) Draw() {
 
 	rl.ClearBackground(backgroundColor)
 
-	for i := range g.physicsWorld.Bodies {
+	for i, body := range g.physicsWorld.Bodies {
 		color := objectColor
-		if i == 0 {
-			color = playerColor
-		}
-
-		body := g.physicsWorld.Bodies[i]
 		if body.Shape() == p2d.Polygon {
 			err := drawPolygon(body.Vertices(), color)
 			if err != nil {
@@ -208,8 +205,11 @@ func (g BoxesAndBallsGame) Draw() {
 				float32(body.Radius()*PixelsPerMeter),
 				color)
 		}
-		showVector := body.Velocity()
-		rl.DrawLineEx(toRLVec(body.Position()), toRLVec(body.Position().Add(showVector)), 2, textColor)
+		if i == 0 {
+			rl.DrawCircleV(toRLVec(body.Position()), 4, playerColor)
+		}
+		// showVector := body.Velocity()
+		// rl.DrawLineEx(toRLVec(body.Position()), toRLVec(body.Position().Add(showVector)), 2, textColor)
 	}
 
 	mestr := fmt.Sprintf("%.1f, %.1f", toP2dVec(rl.GetMousePosition()).X(), toP2dVec(rl.GetMousePosition()).Y())

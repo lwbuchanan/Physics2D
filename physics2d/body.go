@@ -2,6 +2,7 @@ package physics2d
 
 import (
 	"errors"
+	"math"
 )
 
 type BodyShape uint8
@@ -9,6 +10,7 @@ type BodyShape uint8
 const (
 	Ball BodyShape = iota
 	Polygon
+	PointMass
 )
 
 type Body struct {
@@ -18,14 +20,15 @@ type Body struct {
 	vertices                []Vec2
 	transformedVertices     []Vec2
 	needTransformUpdate     bool
+	density                 float64
 	position                Vec2    // m
 	velocity                Vec2    // m/s
 	acceleration            Vec2    // m/s2
-	inverseMass             float64 // kg
+	inverseMass             float64 // 1/kg
 	rotation                float64 // rad
 	rotationalVelocity      float64 // rad/s
 	rotationalAcceleration  float64 // rad/s2
-	inverseMomentOfIntertia float64 // kg*m2
+	inverseMomentOfIntertia float64 // 1/kg*m2
 	restitution             float64
 }
 
@@ -39,6 +42,12 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 	if mass < 0 {
 		return nil, errors.New("physics2d: ball must have nonnegative mass")
 	}
+	var inverseMass float64
+	if mass == 0 {
+		inverseMass = 0
+	} else {
+		inverseMass = 1.0 / mass
+	}
 	return &Body{
 		shape:                   Ball,
 		dimensions:              Vec2{radius * 2, radius * 2},
@@ -46,10 +55,11 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 		vertices:                nil,
 		transformedVertices:     nil,
 		needTransformUpdate:     true,
+		density:                 mass / (math.Pi * radius * radius),
 		position:                position,
 		velocity:                Vec2{0, 0},
 		acceleration:            Vec2{0, 0},
-		inverseMass:             1.0 / mass,
+		inverseMass:             inverseMass,
 		rotation:                0,
 		rotationalVelocity:      0,
 		rotationalAcceleration:  0,
@@ -68,6 +78,12 @@ func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float6
 	if mass < 0 {
 		return nil, errors.New("physics2d: box must have nonnegative mass")
 	}
+	var inverseMass float64
+	if mass == 0 {
+		inverseMass = 0
+	} else {
+		inverseMass = 1.0 / mass
+	}
 	return &Body{
 		shape:                   Polygon,
 		dimensions:              dimensions,
@@ -75,15 +91,45 @@ func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float6
 		vertices:                boxVertieces(dimensions),
 		transformedVertices:     make([]Vec2, 4),
 		needTransformUpdate:     true,
+		density:                 mass / (dimensions.x * dimensions.y),
 		position:                position,
 		velocity:                Vec2{0, 0},
 		acceleration:            Vec2{0, 0},
-		inverseMass:             1.0 / mass,
+		inverseMass:             inverseMass,
 		rotation:                rotation,
 		rotationalVelocity:      0,
 		rotationalAcceleration:  0,
 		inverseMomentOfIntertia: 1.0 / ((1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y)),
 		restitution:             restitution,
+	}, nil
+}
+
+func NewPointMass(position Vec2, mass float64) (*Body, error) {
+	if mass < 0 {
+		return nil, errors.New("physics2d: box must have nonnegative mass")
+	}
+	var inverseMass float64
+	if mass == 0 {
+		inverseMass = 0
+	} else {
+		inverseMass = 1.0 / mass
+	}
+	return &Body{
+		shape:                   PointMass,
+		dimensions:              Vec2{0, 0},
+		radius:                  0,
+		vertices:                nil,
+		transformedVertices:     nil,
+		needTransformUpdate:     false,
+		position:                position,
+		velocity:                Vec2{0, 0},
+		acceleration:            Vec2{0, 0},
+		inverseMass:             inverseMass,
+		rotation:                0,
+		rotationalVelocity:      0,
+		rotationalAcceleration:  0,
+		inverseMomentOfIntertia: 0,
+		restitution:             0,
 	}, nil
 }
 
@@ -133,6 +179,10 @@ func (b *Body) Velocity() Vec2 {
 	return b.velocity
 }
 
+func (b *Body) Density() float64 {
+	return b.density
+}
+
 // Integrate the acceleration/velocity over time to determine new velocity and position
 func (b *Body) Update(dt float64) {
 	b.velocity = b.velocity.Add(b.acceleration.ScaleMult(dt))
@@ -156,6 +206,8 @@ func (b *Body) MoveTo(position Vec2) {
 	b.needTransformUpdate = true
 }
 
+// ApplyForce is preferred except case like gravity, where accleration is constant
+// and force would have to be calculated from the mass
 func (b *Body) Accelerate(acceleration Vec2) {
 	b.acceleration = b.acceleration.Add(acceleration)
 }

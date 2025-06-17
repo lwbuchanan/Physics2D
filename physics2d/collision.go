@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-// Normal is in the a->b direction
+// Normal is normalized and in the a->b direction
 type Collision struct {
 	a      *Body
 	b      *Body
@@ -13,10 +13,27 @@ type Collision struct {
 	depth  float64
 }
 
-// Assumes the collision normal is normalized
 func (c *Collision) Resolve() {
 	c.a.Move(c.normal.ScaleMult(-c.depth / 2))
 	c.b.Move(c.normal.ScaleMult(c.depth / 2))
+
+	relativeVelocity := c.b.velocity.Sub(c.a.velocity)
+	// if relativeVelocity.Dot(c.normal) >= 0 {
+	// 	// objects are separating
+	// 	return
+	// }
+	// if relativeVelocity.Dot(c.normal) == 0 {
+	// 	// objects contacted
+	// 	return
+	// }
+
+	e := math.Min(c.a.restitution, c.b.restitution)
+
+	// No account for rotation or friction
+	j := (-(1 + e) * relativeVelocity.Dot(c.normal)) / (c.a.inverseMass + c.b.inverseMass)
+
+	c.a.velocity = c.a.velocity.Sub(c.normal.ScaleMult(j * c.a.inverseMass))
+	c.b.velocity = c.b.velocity.Add(c.normal.ScaleMult(j * c.b.inverseMass))
 }
 
 func Collide(a, b *Body) (*Collision, error) {
@@ -39,6 +56,42 @@ func Collide(a, b *Body) (*Collision, error) {
 		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.shape)
 	}
 	return nil, fmt.Errorf("collision: %d is not a valid body shape", a.shape)
+}
+
+func CollideWall(b *Body, w World) error {
+	var xMin, xMax, yMin, yMax float64
+
+	switch b.shape {
+	case Ball:
+		xMin, xMax = projectCircle(b.position, b.radius, NewVec2(1, 0))
+		yMin, yMax = projectCircle(b.position, b.radius, NewVec2(0, 1))
+	case Polygon:
+		xMin, xMax = projectVertecies(b.Vertices(), NewVec2(1, 0))
+		yMin, yMax = projectVertecies(b.Vertices(), NewVec2(0, 1))
+	}
+
+	if xMin < 0 {
+		// b.position.x += math.Abs(xMin)
+		// b.velocity.x *= -b.restitution
+		// dummyGround, _ := NewPointMass(NewVec2(xMin, b.position.y), 0)
+		// coll := &Collision{dummyGround, b, NewVec2(1, 0), -xMin}
+		// coll.Resolve()
+		b.position.x += math.Abs(xMin)
+		b.velocity.x *= -b.restitution
+	}
+	if xMax > w.dimensions.x {
+		b.position.x -= math.Abs(xMax - w.dimensions.x)
+		b.velocity.x *= -b.restitution
+	}
+	if yMin < 0 {
+		b.position.y += math.Abs(yMin)
+		b.velocity.y *= -b.restitution
+	}
+	if yMax > w.dimensions.y {
+		b.position.y -= math.Abs(yMax - w.dimensions.y)
+		b.velocity.y *= -b.restitution
+	}
+	return nil
 }
 
 // Gets the min and max of all points projected onto the axis
