@@ -105,18 +105,18 @@ func (g CircleGame) Draw() {
 
 	for i := range len(g.physicsWorld.Bodies) {
 		circle := g.physicsWorld.Bodies[i]
-		rl.DrawCircleV(toRLVec(circle.Position),
-			float32(circle.Radius*PixelsPerMeter),
+		rl.DrawCircleV(toRLVec(circle.Position()),
+			float32(circle.Radius()*PixelsPerMeter),
 			rl.NewColor(119, 141, 169, 255))
 	}
 
 	if g.player != nil {
-		rl.DrawCircleV(toRLVec(g.player.Position),
-			float32(g.player.Radius*PixelsPerMeter),
+		rl.DrawCircleV(toRLVec(g.player.Position()),
+			float32(g.player.Radius()*PixelsPerMeter),
 			rl.NewColor(224, 225, 221, 255))
 	}
 
-	mestr := fmt.Sprintf("%.1f, %.1f", g.player.Position.X(), g.player.Position.Y())
+	mestr := fmt.Sprintf("%.1f, %.1f", g.player.Position().X(), g.player.Position().Y())
 	rl.DrawText(strconv.Itoa(int(rl.GetFPS())), WindowWidth-50, 10, 24, rl.NewColor(255, 240, 124, 255))
 	rl.DrawText(mestr, 10, 10, 24, rl.NewColor(255, 240, 124, 255))
 	rl.EndDrawing()
@@ -198,18 +198,18 @@ func (g BoxesAndBallsGame) Draw() {
 		}
 
 		body := g.physicsWorld.Bodies[i]
-		if body.Shape == p2d.Polygon {
+		if body.Shape() == p2d.Polygon {
 			err := drawPolygon(body.Vertices(), color)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-		} else if body.Shape == p2d.Ball {
-			rl.DrawCircleV(toRLVec(body.Position),
-				float32(body.Radius*PixelsPerMeter),
+		} else if body.Shape() == p2d.Ball {
+			rl.DrawCircleV(toRLVec(body.Position()),
+				float32(body.Radius()*PixelsPerMeter),
 				color)
 		}
-		showVector := body.Velocity
-		rl.DrawLineEx(toRLVec(body.Position), toRLVec(body.Position.Add(showVector)), 2, textColor)
+		showVector := body.Velocity()
+		rl.DrawLineEx(toRLVec(body.Position()), toRLVec(body.Position().Add(showVector)), 2, textColor)
 	}
 
 	mestr := fmt.Sprintf("%.1f, %.1f", toP2dVec(rl.GetMousePosition()).X(), toP2dVec(rl.GetMousePosition()).Y())

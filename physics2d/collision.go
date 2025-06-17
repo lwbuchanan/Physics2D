@@ -13,33 +13,32 @@ type Collision struct {
 	depth  float64
 }
 
-// This should work to resolve any kind of collision
-// as long as a normal and depth are produced
+// Assumes the collision normal is normalized
 func (c *Collision) Resolve() {
 	c.a.Move(c.normal.ScaleMult(-c.depth / 2))
 	c.b.Move(c.normal.ScaleMult(c.depth / 2))
 }
 
 func Collide(a, b *Body) (*Collision, error) {
-	switch a.Shape {
+	switch a.shape {
 	case Ball:
-		switch b.Shape {
+		switch b.shape {
 		case Ball:
 			return ballsCollide(a, b)
 		case Polygon:
 			return ballAndPolygonCollide(a, b)
 		}
-		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
+		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.shape)
 	case Polygon:
-		switch b.Shape {
+		switch b.shape {
 		case Polygon:
 			return polygonsCollide(a, b)
 		case Ball:
 			return ballAndPolygonCollide(b, a)
 		}
-		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
+		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.shape)
 	}
-	return nil, fmt.Errorf("collision: %d is not a valid body shape", b.Shape)
+	return nil, fmt.Errorf("collision: %d is not a valid body shape", a.shape)
 }
 
 // Gets the min and max of all points projected onto the axis
@@ -81,8 +80,8 @@ func closestVertexIdx(position Vec2, vertices []Vec2) int {
 }
 
 func ballsCollide(a, b *Body) (*Collision, error) {
-	bothRad := a.Radius + b.Radius
-	displacement := a.Position.Sub(b.Position)
+	bothRad := a.radius + b.radius
+	displacement := a.position.Sub(b.position)
 	distSquared := displacement.LengthSquared()
 
 	if distSquared > (bothRad * bothRad) {
@@ -92,10 +91,10 @@ func ballsCollide(a, b *Body) (*Collision, error) {
 	distance := math.Sqrt(distSquared)
 
 	if distance == 0 {
-		return &Collision{a, b, Vec2{1.0, 0.0}, a.Radius}, nil
+		return &Collision{a, b, Vec2{1.0, 0.0}, a.radius}, nil
 	}
 
-	depth := distance - (a.Radius + b.Radius)
+	depth := distance - (a.radius + b.radius)
 	normal := displacement.ScaleDivide(distance)
 
 	return &Collision{a, b, normal, depth}, nil
@@ -198,7 +197,7 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 		axis := NewVec2(-edge.y, edge.x).Normalize()
 
 		pMin, pMax := projectVertecies(vertices, axis)
-		bMin, bMax := projectCircle(ball.Position, ball.Radius, axis)
+		bMin, bMax := projectCircle(ball.position, ball.radius, axis)
 
 		if pMin >= bMax || bMin >= pMax {
 			// Found separating axis
@@ -222,11 +221,11 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 	}
 
 	// Now we check for a SA between the circles edge to closest vertex
-	closestVertex := vertices[closestVertexIdx(ball.Position, vertices)]
-	axis := closestVertex.Sub(ball.Position).Normalize()
+	closestVertex := vertices[closestVertexIdx(ball.position, vertices)]
+	axis := closestVertex.Sub(ball.position).Normalize()
 
 	pMin, pMax := projectVertecies(vertices, axis)
-	bMin, bMax := projectCircle(ball.Position, ball.Radius, axis)
+	bMin, bMax := projectCircle(ball.position, ball.radius, axis)
 
 	if pMin >= bMax || bMin >= pMax {
 		// Found separating axis
