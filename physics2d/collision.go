@@ -32,7 +32,6 @@ func (c *Collision) Resolve() {
 		// objects are separating
 		return
 	}
-	fmt.Printf("bounce\n")
 
 	e := math.Min(c.a.restitution, c.b.restitution)
 

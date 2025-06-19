@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	WindowWidth  int32 = 700
+	WindowWidth  int32 = 1000
 	WindowHeight int32 = 800
 )
 
@@ -33,5 +33,5 @@ func main() {
 }
 
 func createGame() Game {
-	return NewPegGame()
+	return NewParticleGame(70)
 }

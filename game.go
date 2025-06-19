@@ -126,12 +126,61 @@ type BoxesAndBallsGame struct {
 	physicsWorld p2d.World
 }
 
+func NewParticleGame(particles int) BoxesAndBallsGame {
+	bodies := make([]*p2d.Body, particles)
+	for i := range particles {
+		p, _ := p2d.NewBall(getRandomPosition(), 0.05, 1, 0.1)
+		p.ApplyForce(getRandomVector(-1, 1))
+		bodies[i] = p
+	}
+	floor, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.025), p2d.NewVec2(worldWidth, 0.05), 0, 1, 0)
+	ceil, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, worldHeight-0.025), p2d.NewVec2(worldWidth, 0.05), 0, 1, 0)
+	wall1, _ := p2d.NewBox(p2d.NewVec2(0.025, worldHeight/2), p2d.NewVec2(0.05, worldHeight), 0, 1, 0)
+	wall2, _ := p2d.NewBox(p2d.NewVec2(worldWidth-0.025, worldHeight/2), p2d.NewVec2(0.05, worldHeight), 0, 1, 0)
+	bodies = append(bodies, floor)
+	bodies = append(bodies, ceil)
+	bodies = append(bodies, wall1)
+	bodies = append(bodies, wall2)
+
+	game := BoxesAndBallsGame{
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 0),
+	}
+
+	return game
+}
+
 func NewPegGame() BoxesAndBallsGame {
 	var bodies []*p2d.Body
-	player, _ := p2d.NewBall(p2d.NewVec2(getRandomFloat(0.3, worldWidth-0.3), worldHeight-0.2), 0.1, 0.5, 0.2)
+	player, _ := p2d.NewBall(p2d.NewVec2(getRandomFloat(0.5, worldWidth-0.5), worldHeight-0.2), 0.1, 1, 0.1)
 	bodies = append(bodies, player)
+	floor, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.05), p2d.NewVec2(worldWidth, 0.1), 0, 0.2, 0)
+	bodies = append(bodies, floor)
+	wall1, _ := p2d.NewBox(p2d.NewVec2(0.3, worldHeight/2+0.1), p2d.NewVec2(0.03, 3.5), 0.11, 1, 0)
+	bodies = append(bodies, wall1)
+	wall2, _ := p2d.NewBox(p2d.NewVec2(worldWidth-0.3, worldHeight/2+0.1), p2d.NewVec2(0.03, 3.5), -0.11, 1, 0)
+	bodies = append(bodies, wall2)
+
+	slots := 8
+	sep := 2.5 / float64(slots)
+	for i := range slots + 1 {
+		slot, _ := p2d.NewBox(p2d.NewVec2(0.5+(sep*float64(i)), 0.25), p2d.NewVec2(0.03, 0.3), 0, 0.6, 0)
+		bodies = append(bodies, slot)
+		print(i)
+	}
+
+	cols := 6
+	rows := 8
+	xsep := 2.8 / float64(cols)
+	ysep := 3 / float64(rows)
+	for j := range rows {
+		for i := range cols - (j+1)%2 {
+			peg, _ := p2d.NewBall(p2d.NewVec2(0.6+(xsep*float64(i)+(xsep/2.0*float64((j+1)%2))), 0.8+(ysep*float64(j))), 0.03, 0.7, 0)
+			bodies = append(bodies, peg)
+		}
+	}
+
 	newGame := BoxesAndBallsGame{
-		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 7),
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 2),
 	}
 
 	rl.SetWindowTitle("Let's go gambling!")

@@ -25,7 +25,9 @@ func (w World) UpdatePhysics(dt float64) {
 		b1 := w.Bodies[i]
 
 		// Accelerate due to gravity
-		b1.Accelerate(NewVec2(0, -w.gravity))
+		if b1.inverseMass > 0 {
+			b1.Accelerate(NewVec2(0, -w.gravity))
+		}
 
 		// Check collisions
 		for j := i + 1; j < len(w.Bodies); j++ {
