@@ -183,6 +183,14 @@ func (b *Body) Density() float64 {
 	return b.density
 }
 
+func (b *Body) Mass() float64 {
+	if b.inverseMass == 0 {
+		return 0
+	} else {
+		return 1.0 / b.inverseMass
+	}
+}
+
 // Integrate the acceleration/velocity over time to determine new velocity and position
 func (b *Body) Update(dt float64) {
 	b.velocity = b.velocity.Add(b.acceleration.ScaleMult(dt))

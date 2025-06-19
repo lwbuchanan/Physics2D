@@ -14,26 +14,34 @@ type Collision struct {
 }
 
 func (c *Collision) Resolve() {
-	c.a.Move(c.normal.ScaleMult(-c.depth / 2))
-	c.b.Move(c.normal.ScaleMult(c.depth / 2))
+
+	//Make sure bodies dont remain overlapped
+	if c.a.inverseMass == 0 {
+		c.b.Move(c.normal.ScaleMult(c.depth))
+	} else if c.b.inverseMass == 0 {
+		c.a.Move(c.normal.ScaleMult(-c.depth))
+	} else {
+		c.a.Move(c.normal.ScaleMult(-c.depth / 2.0))
+		c.b.Move(c.normal.ScaleMult(c.depth / 2.0))
+	}
 
 	relativeVelocity := c.b.velocity.Sub(c.a.velocity)
-	// if relativeVelocity.Dot(c.normal) >= 0 {
-	// 	// objects are separating
-	// 	return
-	// }
-	// if relativeVelocity.Dot(c.normal) == 0 {
-	// 	// objects contacted
-	// 	return
-	// }
+	rVelDotNormal := relativeVelocity.Dot(c.normal)
+
+	if rVelDotNormal > 0.0 {
+		// objects are separating
+		return
+	}
+	fmt.Printf("bounce\n")
 
 	e := math.Min(c.a.restitution, c.b.restitution)
 
 	// No account for rotation or friction
-	j := (-(1 + e) * relativeVelocity.Dot(c.normal)) / (c.a.inverseMass + c.b.inverseMass)
+	j := (-(1.0 + e) * rVelDotNormal) / (c.a.inverseMass + c.b.inverseMass)
 
 	c.a.velocity = c.a.velocity.Sub(c.normal.ScaleMult(j * c.a.inverseMass))
 	c.b.velocity = c.b.velocity.Add(c.normal.ScaleMult(j * c.b.inverseMass))
+
 }
 
 func Collide(a, b *Body) (*Collision, error) {
@@ -134,21 +142,17 @@ func closestVertexIdx(position Vec2, vertices []Vec2) int {
 
 func ballsCollide(a, b *Body) (*Collision, error) {
 	bothRad := a.radius + b.radius
-	displacement := a.position.Sub(b.position)
-	distSquared := displacement.LengthSquared()
+	distSquared := a.position.DistanceSquared(b.position)
 
-	if distSquared > (bothRad * bothRad) {
+	if distSquared >= (bothRad * bothRad) {
 		return nil, nil
 	}
 
+	// Only do expensive operations when collision is confirmed
 	distance := math.Sqrt(distSquared)
-
-	if distance == 0 {
-		return &Collision{a, b, Vec2{1.0, 0.0}, a.radius}, nil
-	}
-
-	depth := distance - (a.radius + b.radius)
-	normal := displacement.ScaleDivide(distance)
+	depth := bothRad - distance
+	displacement := b.position.Sub(a.position)
+	normal := displacement.Normalize()
 
 	return &Collision{a, b, normal, depth}, nil
 }
@@ -167,8 +171,6 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		vNext := aVertices[(i+1)%len(aVertices)]
 		edge := vNext.Sub(vCurr)
 
-		// The Two-Bit Coding videos I've been following say we need to normalize the axis.
-		// Not sure exactly sure why... I will come back here and maybe try to optomize this.
 		axis := NewVec2(-edge.y, edge.x).Normalize() /* Orthoganal to tested edge */
 
 		aMin, aMax := projectVertecies(aVertices, axis)
@@ -179,22 +181,8 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 			return nil, nil
 		}
 
-		// We need to eep track of the minimum non-separating axis, if a and b can't
-		// be separated, the minimum depth collision will determine the normal.
-
-		// The normal needs to point away from a, so if b is closer to the origin, the
-		// normal will be negative. We will compare depth magnitude with abs().
-		aPositiveDepth := aMax - bMin
-		aNegativeDepth := aMin - bMax
-
-		var axisDepth float64
-		if aPositiveDepth < math.Abs(aNegativeDepth) {
-			axisDepth = aPositiveDepth
-		} else {
-			axisDepth = aNegativeDepth
-		}
-
-		if math.Abs(axisDepth) < math.Abs(depth) {
+		axisDepth := math.Min(bMax-aMin, aMax-bMin)
+		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
 		}
@@ -214,21 +202,21 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 			return nil, nil
 		}
 
-		aPositiveDepth := aMax - bMin
-		aNegativeDepth := aMin - bMax
-
-		var axisDepth float64
-		if aPositiveDepth < math.Abs(aNegativeDepth) {
-			axisDepth = aPositiveDepth
-		} else {
-			axisDepth = aNegativeDepth
+		if aMin >= bMax || bMin >= aMax {
+			// Found separating axis
+			return nil, nil
 		}
 
-		if math.Abs(axisDepth) < math.Abs(depth) {
+		axisDepth := math.Min(bMax-aMin, aMax-bMin)
+		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
 		}
+	}
 
+	// Ensure that normal points a->b
+	if b.position.Sub(a.position).Dot(normal) < 0.0 {
+		normal = normal.ScaleMult(-1)
 	}
 
 	return &Collision{a, b, normal, depth}, nil
@@ -249,25 +237,16 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 		edge := vNext.Sub(vCurr)
 		axis := NewVec2(-edge.y, edge.x).Normalize()
 
-		pMin, pMax := projectVertecies(vertices, axis)
 		bMin, bMax := projectCircle(ball.position, ball.radius, axis)
+		pMin, pMax := projectVertecies(vertices, axis)
 
 		if pMin >= bMax || bMin >= pMax {
 			// Found separating axis
 			return nil, nil
 		}
 
-		bPositiveDepth := bMax - pMin
-		bNegativeDepth := bMin - pMax
-
-		var axisDepth float64
-		if bPositiveDepth < math.Abs(bNegativeDepth) {
-			axisDepth = bPositiveDepth
-		} else {
-			axisDepth = bNegativeDepth
-		}
-
-		if math.Abs(axisDepth) < math.Abs(depth) {
+		axisDepth := math.Min(bMax-pMin, pMax-bMin)
+		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
 		}
@@ -285,20 +264,15 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 		return nil, nil
 	}
 
-	bPositiveDepth := bMax - pMin
-	bNegativeDepth := bMin - pMax
-
-	var axisDepth float64
-	if bPositiveDepth < math.Abs(bNegativeDepth) {
-		axisDepth = bPositiveDepth
-	} else {
-		axisDepth = bNegativeDepth
-	}
-
-	if math.Abs(axisDepth) < math.Abs(depth) {
+	axisDepth := math.Min(bMax-pMin, pMax-bMin)
+	if axisDepth < depth {
 		depth = axisDepth
 		normal = axis
 	}
 
+	// Ensure that normal points a->b
+	if polygon.position.Sub(ball.position).Dot(normal) < 0.0 {
+		normal = normal.ScaleMult(-1)
+	}
 	return &Collision{ball, polygon, normal, depth}, nil
 }

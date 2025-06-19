@@ -126,25 +126,41 @@ type BoxesAndBallsGame struct {
 	physicsWorld p2d.World
 }
 
+func NewPegGame() BoxesAndBallsGame {
+	var bodies []*p2d.Body
+	player, _ := p2d.NewBall(p2d.NewVec2(getRandomFloat(0.3, worldWidth-0.3), worldHeight-0.2), 0.1, 0.5, 0.2)
+	bodies = append(bodies, player)
+	newGame := BoxesAndBallsGame{
+		p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 7),
+	}
+
+	rl.SetWindowTitle("Let's go gambling!")
+	return newGame
+}
+
 func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 	bodies := make([]*p2d.Body, numBodies)
 	for i := range numBodies {
 		var err error
 		var body *p2d.Body
+		mass := 0.5
+		if rand.IntN(2) == 0 && i > 0 {
+			mass = 0
+		}
 		if rand.IntN(2) == 0 {
 			body, err = p2d.NewBox(
 				getRandomPosition(),               // Position
-				getRandomVector(.1, .5),           // Size
+				getRandomVector(.3, .5),           // Size
 				getRandomFloat(-math.Pi, math.Pi), // Rotation
-				0.2,                               // Resitution
-				0.5,                               // Mass
+				1,                                 // Resitution
+				mass,                              // Mass
 			)
 		} else {
 			body, err = p2d.NewBall(
-				getRandomPosition(),     // Position
-				getRandomFloat(0.1, .2), // Size
-				0.2,                     // Resitution
-				0.5,                     // Mass
+				getRandomPosition(),       // Position
+				getRandomFloat(0.2, 0.25), // Size
+				1,                         // Resitution
+				mass,                      // Mass
 			)
 		}
 
@@ -195,6 +211,9 @@ func (g BoxesAndBallsGame) Draw() {
 
 	for i, body := range g.physicsWorld.Bodies {
 		color := objectColor
+		if body.Mass() == 0 {
+			color = rl.Red
+		}
 		if body.Shape() == p2d.Polygon {
 			err := drawPolygon(body.Vertices(), color)
 			if err != nil {
