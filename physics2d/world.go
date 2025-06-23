@@ -3,6 +3,7 @@ package physics2d
 import (
 	"fmt"
 	"os"
+	"slices"
 )
 
 // Technically, the game could manage all the physiscs objects on
@@ -13,21 +14,25 @@ type World struct {
 	Bodies     []*Body
 	dimensions Vec2
 	gravity    float64 // m/s/s
+	timeSteps  int
 }
 
-func NewWorld(bodies []*Body, dimensions Vec2, gravity float64) World {
-	return World{Bodies: bodies, dimensions: dimensions, gravity: gravity}
+func NewWorld(bodies []*Body, dimensions Vec2, gravity float64, timeSteps int) World {
+	return World{Bodies: bodies, dimensions: dimensions, gravity: gravity, timeSteps: timeSteps}
 }
 
 // Call this every physics tick
-func (w World) UpdatePhysics(dt float64) {
-	for i := 0; i < len(w.Bodies); i++ {
-		b1 := w.Bodies[i]
+func (w *World) UpdatePhysics(dt float64) {
+	for range w.timeSteps {
+	for i, b1 := range w.Bodies {
 
 		// Accelerate due to gravity
 		if b1.inverseMass > 0 {
 			b1.Accelerate(NewVec2(0, -w.gravity))
 		}
+
+		// Resolve forces acting on body
+		b1.Update(dt/float64(w.timeSteps))
 
 		// Check collisions
 		for j := i + 1; j < len(w.Bodies); j++ {
@@ -43,13 +48,14 @@ func (w World) UpdatePhysics(dt float64) {
 				collision.Resolve()
 			}
 		}
-
-		// err := CollideWall(b1, w)
-		// if err != nil {
-		// 	fmt.Fprintln(os.Stderr, err.Error())
-		// }
-
-		// Resolve forces acting on body
-		b1.Update(dt)
 	}
+	}
+}
+
+func (w *World) AddBody(body *Body) {
+	w.Bodies = append(w.Bodies, body)
+}
+
+func (w *World) DeleteBody(bodyIdx int) {
+	w.Bodies = slices.Delete(w.Bodies, bodyIdx, bodyIdx+1)
 }

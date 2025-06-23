@@ -5,12 +5,13 @@ import (
 )
 
 const (
-	WindowWidth  int32 = 1000
-	WindowHeight int32 = 800
+	WindowWidth  int32 = 1600
+	WindowHeight int32 = 900
 )
 
 // Creates a raylib window and starts the main game loop
 func main() {
+	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowHighdpi)
 	rl.InitWindow(WindowWidth, WindowHeight, "Raylib")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
@@ -33,5 +34,6 @@ func main() {
 }
 
 func createGame() Game {
-	return NewParticleGame(70)
+	// return NewBoxesAndBallGame(20)
+	return NewStackingGame()
 }

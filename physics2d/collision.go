@@ -46,7 +46,7 @@ func (c *Collision) Resolve() {
 func Collide(a, b *Body) (*Collision, error) {
 	switch a.shape {
 	case Ball:
-		switch b.shape {
+	switch b.shape {
 		case Ball:
 			return ballsCollide(a, b)
 		case Polygon:
@@ -163,6 +163,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 
 	aVertices := a.Vertices()
 	bVertices := b.Vertices()
+
 
 	// Vertecies are stored clockwise, so we test edges clockwise
 	for i := range len(aVertices) {

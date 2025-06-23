@@ -8,9 +8,9 @@ type transform struct {
 	Cos float64
 }
 
-func zeroTransform() transform {
-	return newTransform(ZeroVec2(), 0)
-}
+//func zeroTransform() transform {
+//	return newTransform(ZeroVec2(), 0)
+//}
 
 func newTransform(pos Vec2, angle float64) transform {
 	return transform{

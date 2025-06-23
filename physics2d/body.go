@@ -193,6 +193,10 @@ func (b *Body) Mass() float64 {
 
 // Integrate the acceleration/velocity over time to determine new velocity and position
 func (b *Body) Update(dt float64) {
+	if b.inverseMass == 0 {
+		return
+	}
+
 	b.velocity = b.velocity.Add(b.acceleration.ScaleMult(dt))
 	b.rotationalVelocity += b.rotationalAcceleration * dt
 
