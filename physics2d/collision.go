@@ -7,10 +7,13 @@ import (
 
 // Normal is normalized and in the a->b direction
 type Collision struct {
-	a      *Body
-	b      *Body
-	normal Vec2
-	depth  float64
+	a           *Body
+	b           *Body
+	normal      Vec2
+	depth       float64
+	Contact1    Vec2
+	Contact2    Vec2
+	numContacts int
 }
 
 func (c *Collision) Resolve() {
@@ -40,13 +43,12 @@ func (c *Collision) Resolve() {
 
 	c.a.velocity = c.a.velocity.Sub(c.normal.ScaleMult(j * c.a.inverseMass))
 	c.b.velocity = c.b.velocity.Add(c.normal.ScaleMult(j * c.b.inverseMass))
-
 }
 
 func Collide(a, b *Body) (*Collision, error) {
 	switch a.shape {
 	case Ball:
-	switch b.shape {
+		switch b.shape {
 		case Ball:
 			return ballsCollide(a, b)
 		case Polygon:
@@ -63,42 +65,6 @@ func Collide(a, b *Body) (*Collision, error) {
 		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.shape)
 	}
 	return nil, fmt.Errorf("collision: %d is not a valid body shape", a.shape)
-}
-
-func CollideWall(b *Body, w World) error {
-	var xMin, xMax, yMin, yMax float64
-
-	switch b.shape {
-	case Ball:
-		xMin, xMax = projectCircle(b.position, b.radius, NewVec2(1, 0))
-		yMin, yMax = projectCircle(b.position, b.radius, NewVec2(0, 1))
-	case Polygon:
-		xMin, xMax = projectVertecies(b.Vertices(), NewVec2(1, 0))
-		yMin, yMax = projectVertecies(b.Vertices(), NewVec2(0, 1))
-	}
-
-	if xMin < 0 {
-		// b.position.x += math.Abs(xMin)
-		// b.velocity.x *= -b.restitution
-		// dummyGround, _ := NewPointMass(NewVec2(xMin, b.position.y), 0)
-		// coll := &Collision{dummyGround, b, NewVec2(1, 0), -xMin}
-		// coll.Resolve()
-		b.position.x += math.Abs(xMin)
-		b.velocity.x *= -b.restitution
-	}
-	if xMax > w.dimensions.x {
-		b.position.x -= math.Abs(xMax - w.dimensions.x)
-		b.velocity.x *= -b.restitution
-	}
-	if yMin < 0 {
-		b.position.y += math.Abs(yMin)
-		b.velocity.y *= -b.restitution
-	}
-	if yMax > w.dimensions.y {
-		b.position.y -= math.Abs(yMax - w.dimensions.y)
-		b.velocity.y *= -b.restitution
-	}
-	return nil
 }
 
 // Gets the min and max of all points projected onto the axis
@@ -153,7 +119,9 @@ func ballsCollide(a, b *Body) (*Collision, error) {
 	displacement := b.position.Sub(a.position)
 	normal := displacement.Normalize()
 
-	return &Collision{a, b, normal, depth}, nil
+	collisionPoint := a.position.Add(normal.ScaleMult(a.radius))
+
+	return &Collision{a, b, normal, depth, collisionPoint, ZeroVec2(), 1}, nil
 }
 
 // SAT only works for convex polygons
@@ -163,7 +131,6 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 
 	aVertices := a.Vertices()
 	bVertices := b.Vertices()
-
 
 	// Vertecies are stored clockwise, so we test edges clockwise
 	for i := range len(aVertices) {
@@ -219,7 +186,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		normal = normal.ScaleMult(-1)
 	}
 
-	return &Collision{a, b, normal, depth}, nil
+	return &Collision{a, b, normal, depth, ZeroVec2(), ZeroVec2(), 0}, nil
 }
 
 func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
@@ -274,5 +241,7 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 	if polygon.position.Sub(ball.position).Dot(normal) < 0.0 {
 		normal = normal.ScaleMult(-1)
 	}
-	return &Collision{ball, polygon, normal, depth}, nil
+
+	collisionPoint := ball.position.Add(normal.ScaleMult(ball.radius))
+	return &Collision{ball, polygon, normal, depth, collisionPoint, ZeroVec2(), 1}, nil
 }

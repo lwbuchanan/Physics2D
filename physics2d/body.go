@@ -43,10 +43,13 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 		return nil, errors.New("physics2d: ball must have nonnegative mass")
 	}
 	var inverseMass float64
+	var inverseMomentOfIntertia float64
 	if mass == 0 {
 		inverseMass = 0
+		inverseMomentOfIntertia = 0
 	} else {
 		inverseMass = 1.0 / mass
+		inverseMomentOfIntertia = 1.0 / (0.5 * mass * radius * radius)
 	}
 	return &Body{
 		shape:                   Ball,
@@ -63,7 +66,7 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 		rotation:                0,
 		rotationalVelocity:      0,
 		rotationalAcceleration:  0,
-		inverseMomentOfIntertia: 1.0 / (0.5 * mass * radius * radius),
+		inverseMomentOfIntertia: inverseMomentOfIntertia,
 		restitution:             restitution,
 	}, nil
 }
@@ -79,10 +82,13 @@ func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float6
 		return nil, errors.New("physics2d: box must have nonnegative mass")
 	}
 	var inverseMass float64
+	var inverseMomentOfIntertia float64
 	if mass == 0 {
 		inverseMass = 0
+		inverseMomentOfIntertia = 0
 	} else {
 		inverseMass = 1.0 / mass
+		inverseMomentOfIntertia = 1.0 / ((1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y))
 	}
 	return &Body{
 		shape:                   Polygon,
@@ -99,7 +105,7 @@ func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float6
 		rotation:                rotation,
 		rotationalVelocity:      0,
 		rotationalAcceleration:  0,
-		inverseMomentOfIntertia: 1.0 / ((1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y)),
+		inverseMomentOfIntertia: inverseMomentOfIntertia,
 		restitution:             restitution,
 	}, nil
 }

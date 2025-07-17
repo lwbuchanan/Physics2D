@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	WindowWidth  int32 = 1600
-	WindowHeight int32 = 900
+	WindowWidth  int32 = 1400
+	WindowHeight int32 = 800
 )
 
 // Creates a raylib window and starts the main game loop
@@ -14,7 +14,7 @@ func main() {
 	rl.SetConfigFlags(rl.FlagVsyncHint | rl.FlagWindowHighdpi)
 	rl.InitWindow(WindowWidth, WindowHeight, "Raylib")
 	defer rl.CloseWindow()
-	rl.SetTargetFPS(60)
+	rl.SetTargetFPS(120)
 
 	var game Game = createGame()
 	var lastTickTime float64 = rl.GetTime()

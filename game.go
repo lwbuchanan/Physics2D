@@ -12,6 +12,7 @@ import (
 	"image/color"
 	"math"
 	"math/rand/v2"
+	"slices"
 	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -30,6 +31,11 @@ var (
 	playerColor     = rl.NewColor(224, 225, 221, 255)
 	objectColor     = rl.NewColor(119, 181, 169, 255)
 	backgroundColor = rl.NewColor(13, 27, 42, 255)
+
+	numBodies      int     = 0
+	elapsedSteps   int     = 0
+	stopwatchStart float64 = rl.GetTime()
+	avgStepTime    float64 = 0
 )
 
 type Game interface {
@@ -101,7 +107,6 @@ func NewPegGame() BoxesAndBallsGame {
 	rl.SetWindowTitle("Let's go gambling!")
 	return newGame
 }
-
 
 func NewBoxesAndBallGame(numBodies int) BoxesAndBallsGame {
 	bodies := make([]*p2d.Body, numBodies)
@@ -205,18 +210,17 @@ func (g BoxesAndBallsGame) Draw() {
 
 type StackingGame struct {
 	physicsWorld *p2d.World
-	colors []color.RGBA
+	colors       []color.RGBA
 }
 
 func NewStackingGame() *StackingGame {
 	var bodies []*p2d.Body
 	var colors []color.RGBA
-	floor, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.15), p2d.NewVec2(worldWidth - 0.15, 0.15), 0, 0.5, 0)
+	floor, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.15), p2d.NewVec2(worldWidth-0.15, 0.15), 0, 0.5, 0)
 	bodies = append(bodies, floor)
 	colors = append(colors, rl.Gray)
-	
 
-	world := p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 9.8, 100)
+	world := p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 9.8, 50)
 	newGame := StackingGame{
 		&world,
 		colors,
@@ -224,7 +228,7 @@ func NewStackingGame() *StackingGame {
 	return &newGame
 }
 
-func (g* StackingGame) Draw() {
+func (g *StackingGame) Draw() {
 	rl.BeginDrawing()
 	rl.ClearBackground(backgroundColor)
 
@@ -241,14 +245,30 @@ func (g* StackingGame) Draw() {
 				color)
 		}
 	}
-	rl.DrawText(strconv.Itoa(int(rl.GetFPS())), WindowWidth-50, 10, 24, textColor)
+	for _, e := range g.physicsWorld.CollisionEvents {
+		drawVectorArrow(p2d.ZeroVec2(), e.Contact1)
+		drawVectorArrow(p2d.ZeroVec2(), e.Contact2)
+	}
+
+	performanceString := fmt.Sprintf(
+		"Step Time: %f s\nBodies: %d\nFPS: %d",
+		avgStepTime,
+		numBodies,
+		rl.GetFPS())
+
+	rl.DrawText(performanceString, 10, 10, 20, textColor)
+
+	if g.physicsWorld.Paused {
+		rl.DrawText("PAUSED", (WindowWidth/2)-65, 10, 30, rl.Red)
+		rl.DrawRectangleLinesEx(rl.NewRectangle(0, 0, float32(WindowWidth), float32(WindowHeight)), 5, rl.Red)
+	}
 	rl.EndDrawing()
 }
 
-func (g* StackingGame) Update(dt float64) {
+func (g *StackingGame) Update(dt float64) {
 	if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
 		newBox, err := p2d.NewBox(
-			toP2dVec(rl.GetMousePosition()), 
+			toP2dVec(rl.GetMousePosition()),
 			getRandomVector(0.3, 0.4),
 			0,
 			0.5,
@@ -263,7 +283,7 @@ func (g* StackingGame) Update(dt float64) {
 	}
 	if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
 		newBall, err := p2d.NewBall(
-			toP2dVec(rl.GetMousePosition()), 
+			toP2dVec(rl.GetMousePosition()),
 			getRandomFloat(0.15, 0.2),
 			0.5,
 			1,
@@ -275,7 +295,32 @@ func (g* StackingGame) Update(dt float64) {
 		g.physicsWorld.AddBody(newBall)
 		g.colors = append(g.colors, rl.Yellow)
 	}
+	if rl.IsKeyPressed(rl.KeySpace) {
+		g.physicsWorld.Paused = !g.physicsWorld.Paused
+	}
 	g.physicsWorld.UpdatePhysics(dt)
+	elapsedSteps += g.physicsWorld.NumSteps()
+
+	currTime := rl.GetTime()
+	elapsedTime := currTime - stopwatchStart
+	if elapsedTime > 0.2 {
+		avgStepTime = elapsedTime / float64(elapsedSteps)
+
+		elapsedSteps = 0
+		stopwatchStart = rl.GetTime()
+		numBodies = len(g.physicsWorld.Bodies)
+	}
+
+	deleteSet := map[int]bool{}
+	for i, b := range g.physicsWorld.Bodies {
+		if b.Position().Y() < -5 {
+			deleteSet[i] = true
+		}
+	}
+	for i := range deleteSet {
+		g.physicsWorld.Bodies = slices.Delete(g.physicsWorld.Bodies, i, i+1)
+		g.colors = slices.Delete(g.colors, i, i+1)
+	}
 }
 
 func toRLVec(v p2d.Vec2) rl.Vector2 {
@@ -304,21 +349,6 @@ func getRandomFloat(min float64, max float64) float64 {
 	return min + rand.Float64()*(max-min)
 }
 
-//func drawConnectedVertices(vertices []p2d.Vec2, thickness float32, color color.RGBA) error {
-//	numVertices := len(vertices)
-//	if numVertices < 2 {
-//		return errors.New("drawConnectedVertices: not enough vertices")
-//	}
-//	for i := range numVertices {
-//		rl.DrawLineEx(
-//			toRLVec(vertices[i]),
-//			toRLVec(vertices[(i+1)%numVertices]),
-//			thickness,
-//			color)
-//	}
-//	return nil
-//}
-
 func drawPolygon(vertices []p2d.Vec2, color color.RGBA) error {
 	numVertices := len(vertices)
 	if numVertices < 3 {
@@ -331,4 +361,9 @@ func drawPolygon(vertices []p2d.Vec2, color color.RGBA) error {
 	}
 	rl.DrawTriangleFan(rlPoints, color)
 	return nil
+}
+
+func drawVectorArrow(origin, vector p2d.Vec2) {
+	rl.DrawLineEx(toRLVec(origin), toRLVec(vector), 2, rl.Red)
+	rl.DrawCircleV(toRLVec(vector), 4, rl.Red)
 }
