@@ -29,6 +29,8 @@ type Simulation interface {
 	Draw()
 }
 
+///////////////////////////////////////////////////////////////////////
+
 // The game core is the core of every simulation
 type GameCore struct {
 	physicsWorld    *p2d.World
@@ -108,37 +110,31 @@ func (c *GameCore) Update(dt float64) {
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+
 type StackingSim struct {
 	GameCore
 }
 
 func (s *StackingSim) Update(dt float64) {
 	if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
-		newBox, err := p2d.NewBox(
+		newBox := p2d.NewBox(
 			toP2dVec(rl.GetMousePosition()),
 			getRandomVector(0.3, 0.4),
 			0,
 			0.5,
 			1,
 		)
-		if err != nil {
-			fmt.Println(err.Error())
-			panic(-1)
-		}
 		s.physicsWorld.AddBody(newBox)
 		s.colors = append(s.colors, rl.SkyBlue)
 	}
 	if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-		newBall, err := p2d.NewBall(
+		newBall := p2d.NewBall(
 			toP2dVec(rl.GetMousePosition()),
 			getRandomFloat(0.15, 0.2),
 			0.5,
 			1,
 		)
-		if err != nil {
-			println(err.Error())
-			panic(-1)
-		}
 		s.physicsWorld.AddBody(newBall)
 		s.colors = append(s.colors, rl.Yellow)
 	}
@@ -148,13 +144,79 @@ func (s *StackingSim) Update(dt float64) {
 func NewStackingSim() *StackingSim {
 	var bodies []*p2d.Body
 	var colors []color.RGBA
-	floor, _ := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.15), p2d.NewVec2(worldWidth-0.15, 0.15), 0, 0.5, 0)
+	floor := p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.15), p2d.NewVec2(worldWidth-0.15, 0.15), 0, 0.5, 0)
 	bodies = append(bodies, floor)
 	colors = append(colors, rl.Gray)
 
 	world := p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 9.8, 50)
 
 	return &StackingSim{
+		GameCore{
+			&world,
+			rl.NewColor(255, 240, 124, 255),
+			rl.NewColor(13, 27, 42, 255),
+			colors,
+			//debug stuff
+			true,
+			0,
+			0,
+			rl.GetTime(),
+			1.0,
+		},
+	}
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+type FloatingSim struct {
+	GameCore
+}
+
+func (s *FloatingSim) Update(dt float64) {
+	if rl.IsMouseButtonPressed(rl.MouseButtonLeft) {
+		newBox := p2d.NewBox(
+			toP2dVec(rl.GetMousePosition()),
+			getRandomVector(0.3, 0.4),
+			0,
+			0.5,
+			1,
+		)
+		newBox.ApplyForce(getRandomVector(-500, 500))
+		s.physicsWorld.AddBody(newBox)
+		s.colors = append(s.colors, rl.SkyBlue)
+	}
+	if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
+		newBall := p2d.NewBall(
+			toP2dVec(rl.GetMousePosition()),
+			getRandomFloat(0.15, 0.2),
+			0.5,
+			1,
+		)
+		newBall.ApplyForce(getRandomVector(-500, 500))
+		s.physicsWorld.AddBody(newBall)
+		s.colors = append(s.colors, rl.Yellow)
+	}
+	s.GameCore.Update(dt)
+}
+
+func NewFloatingSim() *FloatingSim {
+	var bodies []*p2d.Body
+	var colors []color.RGBA
+	walls := []*p2d.Body{
+		p2d.NewBox(p2d.NewVec2(worldWidth/2, 0.15), p2d.NewVec2(worldWidth-0.15, 0.15), 0, 0.5, 0),
+		p2d.NewBox(p2d.NewVec2(worldWidth/2, worldHeight-0.15), p2d.NewVec2(worldWidth-0.15, 0.15), 0, 0.5, 0),
+		p2d.NewBox(p2d.NewVec2(0.15, worldHeight/2), p2d.NewVec2(0.15, worldHeight-0.15), 0, 0.5, 0),
+		p2d.NewBox(p2d.NewVec2(worldWidth-0.15, worldHeight/2), p2d.NewVec2(0.15, worldHeight-0.15), 0, 0.5, 0),
+	}
+	bodies = append(bodies, walls...)
+	colors = append(colors, rl.Gray)
+	colors = append(colors, rl.Gray)
+	colors = append(colors, rl.Gray)
+	colors = append(colors, rl.Gray)
+
+	world := p2d.NewWorld(bodies, p2d.NewVec2(worldWidth, worldHeight), 0, 10)
+
+	return &FloatingSim{
 		GameCore{
 			&world,
 			rl.NewColor(255, 240, 124, 255),

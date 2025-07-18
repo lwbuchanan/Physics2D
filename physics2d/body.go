@@ -32,15 +32,15 @@ type Body struct {
 	restitution             float64
 }
 
-func NewBall(position Vec2, radius float64, restitution float64, mass float64) (*Body, error) {
+func NewBall(position Vec2, radius float64, restitution float64, mass float64) *Body {
 	if radius <= 0 {
-		return nil, errors.New("physics2d: ball must have positive radius")
+		return nil
 	}
 	if restitution < 0 || restitution > 1 {
-		return nil, errors.New("physics2d: ball must have restitution in range 0..1")
+		return nil
 	}
 	if mass < 0 {
-		return nil, errors.New("physics2d: ball must have nonnegative mass")
+		return nil
 	}
 	var inverseMass float64
 	var inverseMomentOfIntertia float64
@@ -68,18 +68,18 @@ func NewBall(position Vec2, radius float64, restitution float64, mass float64) (
 		rotationalAcceleration:  0,
 		inverseMomentOfIntertia: inverseMomentOfIntertia,
 		restitution:             restitution,
-	}, nil
+	}
 }
 
-func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float64, mass float64) (*Body, error) {
+func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float64, mass float64) *Body {
 	if dimensions.x <= 0 || dimensions.y <= 0 {
-		return nil, errors.New("physics2d: box must have positive dimension")
+		return nil
 	}
 	if restitution < 0 || restitution > 1 {
-		return nil, errors.New("physics2d: box must have restitution in range 0..1")
+		return nil
 	}
 	if mass < 0 {
-		return nil, errors.New("physics2d: box must have nonnegative mass")
+		return nil
 	}
 	var inverseMass float64
 	var inverseMomentOfIntertia float64
@@ -107,7 +107,7 @@ func NewBox(position Vec2, dimensions Vec2, rotation float64, restitution float6
 		rotationalAcceleration:  0,
 		inverseMomentOfIntertia: inverseMomentOfIntertia,
 		restitution:             restitution,
-	}, nil
+	}
 }
 
 func NewPointMass(position Vec2, mass float64) (*Body, error) {
