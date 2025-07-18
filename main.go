@@ -16,24 +16,23 @@ func main() {
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(120)
 
-	var game Game = createGame()
+	var sim Simulation = createSim()
 	var lastTickTime float64 = rl.GetTime()
 	var deltaTime float64 = 0
 	for !rl.WindowShouldClose() {
 
 		// We can always get a new game instance to hot-reload
 		if rl.IsKeyPressed('R') {
-			game = createGame()
+			sim = createSim()
 		}
 
 		deltaTime = rl.GetTime() - lastTickTime
 		lastTickTime = rl.GetTime()
-		game.Update(deltaTime)
-		game.Draw()
+		sim.Update(deltaTime)
+		sim.Draw()
 	}
 }
 
-func createGame() Game {
-	// return NewBoxesAndBallGame(20)
-	return NewStackingGame()
+func createSim() Simulation {
+	return NewStackingSim()
 }

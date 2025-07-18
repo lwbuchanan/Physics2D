@@ -2,7 +2,6 @@ package physics2d
 
 import (
 	"errors"
-	"fmt"
 	"math"
 )
 
@@ -268,17 +267,4 @@ func (b *Body) Rotate(rotationalDisplacement float64) {
 func (b *Body) RotateTo(rotation float64) {
 	b.rotation = rotation
 	b.needTransformUpdate = true
-}
-
-func (b *Body) ContainsPoint(p Vec2) bool {
-	if b.shape == Ball {
-		return p.Sub(b.position).LengthSquared() <= b.radius*b.radius
-	} else {
-		return p.x < MaxX(b.vertices) && p.x > MinX(b.vertices) && p.y < MaxY(b.vertices) && p.y > MinY(b.vertices)
-	}
-}
-
-func (b *Body) StatString() string {
-	stats := fmt.Sprintf("Mass: %f\nMOI: %f\nrVel: %f", b.Mass(), b.MomentOfIntertia(), b.RotationalVelocity())
-	return stats
 }
