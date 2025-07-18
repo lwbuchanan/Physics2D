@@ -1,6 +1,9 @@
 package physics2d
 
-import "math"
+import (
+	"math"
+	"slices"
+)
 
 type Vec2 struct {
 	x, y float64
@@ -54,8 +57,9 @@ func (v Vec2) Transform(t transform) Vec2 {
 	return Vec2{rx, ry}.Add(t.Pos)
 }
 
-func (v1 Vec2) Equal(v2 Vec2) bool {
-	return v1.x == v2.x && v1.y == v2.y
+// True if v1 and v2 are within 0.00025
+func (v1 Vec2) CloseTo(v2 Vec2) bool {
+	return v1.DistanceSquared(v2) < 0.00025
 }
 
 func (v Vec2) LengthSquared() float64 {
@@ -81,4 +85,44 @@ func (v Vec2) Length() float64 {
 // Uses sqrt, avoid if possible
 func (v Vec2) Normalize() Vec2 {
 	return v.ScaleDivide(v.Length())
+}
+
+func (v Vec2) Perpendicular() Vec2 {
+	return NewVec2(-v.y, v.x)
+}
+
+func cmpX(a, b Vec2) int {
+	if a.x > b.x {
+		return 1
+	}
+	if a.x < b.x {
+		return -1
+	}
+	return 0
+}
+
+func cmpY(a, b Vec2) int {
+	if a.y > b.y {
+		return 1
+	}
+	if a.y < b.y {
+		return -1
+	}
+	return 0
+}
+
+func MinX(vecs []Vec2) float64 {
+	return slices.MinFunc(vecs, cmpX).x
+}
+
+func MinY(vecs []Vec2) float64 {
+	return slices.MinFunc(vecs, cmpY).y
+}
+
+func MaxX(vecs []Vec2) float64 {
+	return slices.MaxFunc(vecs, cmpX).x
+}
+
+func MaxY(vecs []Vec2) float64 {
+	return slices.MaxFunc(vecs, cmpY).y
 }

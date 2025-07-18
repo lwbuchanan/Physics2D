@@ -7,18 +7,15 @@ import (
 
 // Normal is normalized and in the a->b direction
 type Collision struct {
-	a           *Body
-	b           *Body
-	normal      Vec2
-	depth       float64
-	Contact1    Vec2
-	Contact2    Vec2
-	numContacts int
+	a      *Body
+	b      *Body
+	normal Vec2
+	depth  float64
 }
 
 func (c *Collision) Resolve() {
 
-	//Make sure bodies dont remain overlapped
+	// Start by separating bodies
 	if c.a.inverseMass == 0 {
 		c.b.Move(c.normal.ScaleMult(c.depth))
 	} else if c.b.inverseMass == 0 {
@@ -27,6 +24,10 @@ func (c *Collision) Resolve() {
 		c.a.Move(c.normal.ScaleMult(-c.depth / 2.0))
 		c.b.Move(c.normal.ScaleMult(c.depth / 2.0))
 	}
+
+	// We can find accurate collision points now that they are barely touching
+	cp := collisionPoints(c)[0]
+	// If I come back to this, it might be nice have special cases for multiple collision points
 
 	relativeVelocity := c.b.velocity.Sub(c.a.velocity)
 	rVelDotNormal := relativeVelocity.Dot(c.normal)
@@ -38,11 +39,18 @@ func (c *Collision) Resolve() {
 
 	e := math.Min(c.a.restitution, c.b.restitution)
 
-	// No account for rotation or friction
-	j := (-(1.0 + e) * rVelDotNormal) / (c.a.inverseMass + c.b.inverseMass)
+	rAP_perp := cp.Sub(c.a.position).Perpendicular()
+	rBP_perp := cp.Sub(c.b.position).Perpendicular()
 
-	c.a.velocity = c.a.velocity.Sub(c.normal.ScaleMult(j * c.a.inverseMass))
+	j := (-(1.0 + e) * rVelDotNormal) / ((c.a.inverseMass + c.b.inverseMass) +
+		(rAP_perp.Dot(c.normal) * rAP_perp.Dot(c.normal) * c.a.inverseMomentOfIntertia) +
+		(rBP_perp.Dot(c.normal) * rBP_perp.Dot(c.normal) * c.b.inverseMomentOfIntertia))
+
+	c.a.velocity = c.a.velocity.Add(c.normal.ScaleMult(-j * c.a.inverseMass))
 	c.b.velocity = c.b.velocity.Add(c.normal.ScaleMult(j * c.b.inverseMass))
+
+	c.a.rotationalVelocity += rAP_perp.Dot(c.normal.ScaleMult(-j)) * c.a.inverseMomentOfIntertia
+	c.b.rotationalVelocity += rBP_perp.Dot(c.normal.ScaleMult(j)) * c.b.inverseMomentOfIntertia
 }
 
 func Collide(a, b *Body) (*Collision, error) {
@@ -65,6 +73,82 @@ func Collide(a, b *Body) (*Collision, error) {
 		return nil, fmt.Errorf("collision: %d is not a valid body shape", b.shape)
 	}
 	return nil, fmt.Errorf("collision: %d is not a valid body shape", a.shape)
+}
+
+func collisionPoints(c *Collision) []Vec2 {
+	if c.a.shape == Ball { // If a is a ball, we dont care what b is
+		// Balls can only contact other objects at one point
+		return []Vec2{c.a.position.Add(c.normal.ScaleMult(c.a.radius))}
+	}
+	// Otherwise, both are definitely polygons
+	cp1 := ZeroVec2()
+	cp2 := ZeroVec2()
+	numContacts := 0
+
+	aVerts := c.a.Vertices()
+	bVerts := c.b.Vertices()
+	minDistSquared := math.Inf(1)
+	for _, aVert := range aVerts {
+		for j, bEdgeStart := range bVerts {
+			bEdgeEnd := bVerts[(j+1)%len(bVerts)]
+			cp, distSquared := ClosestPointOnSegment(aVert, bEdgeStart, bEdgeEnd)
+
+			if distSquared == minDistSquared {
+				if cp.CloseTo(cp1) {
+					cp2 = cp
+					numContacts = 2
+				}
+			} else if distSquared < minDistSquared {
+				cp1 = cp
+				numContacts = 1
+				minDistSquared = distSquared
+			}
+		}
+	}
+	for _, bVert := range bVerts {
+		for j, aEdgeStart := range aVerts {
+			aEdgeEnd := aVerts[(j+1)%len(aVerts)]
+			cp, distSquared := ClosestPointOnSegment(bVert, aEdgeStart, aEdgeEnd)
+
+			if distSquared == minDistSquared {
+				if cp.CloseTo(cp1) {
+					cp2 = cp
+					numContacts = 2
+				}
+			} else if distSquared < minDistSquared {
+				cp1 = cp
+				numContacts = 1
+				minDistSquared = distSquared
+			}
+		}
+	}
+
+	if numContacts == 1 {
+		return []Vec2{cp1}
+	}
+	return []Vec2{cp1, cp2}
+}
+
+// Gets the point on the segment VW that is closest to P, and its distance(squared) from P
+func ClosestPointOnSegment(p, v, w Vec2) (Vec2, float64) {
+	vw := w.Sub(v)
+	vp := p.Sub(v)
+
+	proj := vp.Dot(vw)
+	lenVWSq := vw.LengthSquared()
+
+	d := proj / lenVWSq
+
+	var cp Vec2
+	if d <= 0 {
+		cp = v
+	} else if d >= 1 {
+		cp = w
+	} else {
+		cp = v.Add(vw.ScaleMult(d))
+	}
+
+	return cp, cp.DistanceSquared(p)
 }
 
 // Gets the min and max of all points projected onto the axis
@@ -119,9 +203,7 @@ func ballsCollide(a, b *Body) (*Collision, error) {
 	displacement := b.position.Sub(a.position)
 	normal := displacement.Normalize()
 
-	collisionPoint := a.position.Add(normal.ScaleMult(a.radius))
-
-	return &Collision{a, b, normal, depth, collisionPoint, ZeroVec2(), 1}, nil
+	return &Collision{a, b, normal, depth}, nil
 }
 
 // SAT only works for convex polygons
@@ -138,7 +220,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		vNext := aVertices[(i+1)%len(aVertices)]
 		edge := vNext.Sub(vCurr)
 
-		axis := NewVec2(-edge.y, edge.x).Normalize() /* Orthoganal to tested edge */
+		axis := edge.Perpendicular().Normalize() /* Orthoganal to tested edge */
 
 		aMin, aMax := projectVertecies(aVertices, axis)
 		bMin, bMax := projectVertecies(bVertices, axis)
@@ -149,6 +231,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		}
 
 		axisDepth := math.Min(bMax-aMin, aMax-bMin)
+
 		if axisDepth < depth {
 			depth = axisDepth
 			normal = axis
@@ -160,7 +243,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		vCurr := bVertices[i]
 		vNext := bVertices[(i+1)%len(bVertices)]
 		edge := vNext.Sub(vCurr)
-		axis := NewVec2(-edge.y, edge.x).Normalize()
+		axis := edge.Perpendicular().Normalize()
 
 		aMin, aMax := projectVertecies(aVertices, axis)
 		bMin, bMax := projectVertecies(bVertices, axis)
@@ -186,7 +269,7 @@ func polygonsCollide(a, b *Body) (*Collision, error) {
 		normal = normal.ScaleMult(-1)
 	}
 
-	return &Collision{a, b, normal, depth, ZeroVec2(), ZeroVec2(), 0}, nil
+	return &Collision{a, b, normal, depth}, nil
 }
 
 func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
@@ -195,31 +278,7 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 	normal := ZeroVec2()
 	depth := math.MaxFloat64
 
-	// This code is mostly the same as 2 polygons. Theres a lot of code duplication, but its
-	// tricky to make it more abstract while making sure that the normal still points in the
-	// right direction and everything.
-	for i := range len(vertices) {
-		vCurr := vertices[i]
-		vNext := vertices[(i+1)%len(vertices)]
-		edge := vNext.Sub(vCurr)
-		axis := NewVec2(-edge.y, edge.x).Normalize()
-
-		bMin, bMax := projectCircle(ball.position, ball.radius, axis)
-		pMin, pMax := projectVertecies(vertices, axis)
-
-		if pMin >= bMax || bMin >= pMax {
-			// Found separating axis
-			return nil, nil
-		}
-
-		axisDepth := math.Min(bMax-pMin, pMax-bMin)
-		if axisDepth < depth {
-			depth = axisDepth
-			normal = axis
-		}
-	}
-
-	// Now we check for a SA between the circles edge to closest vertex
+	// Check for a SA between the circles edge to closest vertex
 	closestVertex := vertices[closestVertexIdx(ball.position, vertices)]
 	axis := closestVertex.Sub(ball.position).Normalize()
 
@@ -237,11 +296,34 @@ func ballAndPolygonCollide(ball, polygon *Body) (*Collision, error) {
 		normal = axis
 	}
 
+	// This code is mostly the same as 2 polygons. Theres a lot of code duplication, but its
+	// tricky to make it more abstract while making sure that the normal still points in the
+	// right direction and everything.
+	for i := range len(vertices) {
+		vCurr := vertices[i]
+		vNext := vertices[(i+1)%len(vertices)]
+		edge := vNext.Sub(vCurr)
+		axis := edge.Perpendicular().Normalize()
+
+		bMin, bMax := projectCircle(ball.position, ball.radius, axis)
+		pMin, pMax := projectVertecies(vertices, axis)
+
+		if pMin >= bMax || bMin >= pMax {
+			// Found separating axis
+			return nil, nil
+		}
+
+		axisDepth := math.Min(bMax-pMin, pMax-bMin)
+		if axisDepth < depth {
+			depth = axisDepth
+			normal = axis
+		}
+	}
+
 	// Ensure that normal points a->b
 	if polygon.position.Sub(ball.position).Dot(normal) < 0.0 {
 		normal = normal.ScaleMult(-1)
 	}
 
-	collisionPoint := ball.position.Add(normal.ScaleMult(ball.radius))
-	return &Collision{ball, polygon, normal, depth, collisionPoint, ZeroVec2(), 1}, nil
+	return &Collision{ball, polygon, normal, depth}, nil
 }

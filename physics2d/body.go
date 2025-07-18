@@ -2,6 +2,7 @@ package physics2d
 
 import (
 	"errors"
+	"fmt"
 	"math"
 )
 
@@ -185,6 +186,10 @@ func (b *Body) Velocity() Vec2 {
 	return b.velocity
 }
 
+func (b *Body) RotationalVelocity() float64 {
+	return b.rotationalVelocity
+}
+
 func (b *Body) Density() float64 {
 	return b.density
 }
@@ -194,6 +199,14 @@ func (b *Body) Mass() float64 {
 		return 0
 	} else {
 		return 1.0 / b.inverseMass
+	}
+}
+
+func (b *Body) MomentOfIntertia() float64 {
+	if b.inverseMomentOfIntertia == 0 {
+		return 0
+	} else {
+		return 1.0 / b.inverseMomentOfIntertia
 	}
 }
 
@@ -255,4 +268,17 @@ func (b *Body) Rotate(rotationalDisplacement float64) {
 func (b *Body) RotateTo(rotation float64) {
 	b.rotation = rotation
 	b.needTransformUpdate = true
+}
+
+func (b *Body) ContainsPoint(p Vec2) bool {
+	if b.shape == Ball {
+		return p.Sub(b.position).LengthSquared() <= b.radius*b.radius
+	} else {
+		return p.x < MaxX(b.vertices) && p.x > MinX(b.vertices) && p.y < MaxY(b.vertices) && p.y > MinY(b.vertices)
+	}
+}
+
+func (b *Body) StatString() string {
+	stats := fmt.Sprintf("Mass: %f\nMOI: %f\nrVel: %f", b.Mass(), b.MomentOfIntertia(), b.RotationalVelocity())
+	return stats
 }

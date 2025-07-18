@@ -12,7 +12,7 @@ The physics math is contained in a submodule that doesn't depend on raylib. I pr
 - <https://code.tutsplus.com/how-to-create-a-custom-2d-physics-engine-the-basics-and-impulse-resolution--gamedev-6331t>
 - <https://www.chrishecker.com/Rigid_Body_Dynamics>
 
-This guy's explanations are extreamly helpful. A lot of my code was initally translated from the c# in the videos, but I've been working on trying to optomize and refactor it using my own understanding. If you are interested in building an engine yourself, I'd highly recommend you start by following along with his videos.
+This guy's explanations are extreamly helpful. A lot of my code was initally based on the c# in the videos. If you are interested in building an engine yourself, I'd highly recommend you start by following along with his videos.
 - <https://www.youtube.com/watch?v=emfGoBgE020&list=PLSlpr6o9vURwq3oxVZSimY8iC-cdd3kIs&index=4>
 
 ### Learning Milestones

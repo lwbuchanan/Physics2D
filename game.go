@@ -245,10 +245,6 @@ func (g *StackingGame) Draw() {
 				color)
 		}
 	}
-	for _, e := range g.physicsWorld.CollisionEvents {
-		drawVectorArrow(p2d.ZeroVec2(), e.Contact1)
-		drawVectorArrow(p2d.ZeroVec2(), e.Contact2)
-	}
 
 	performanceString := fmt.Sprintf(
 		"Step Time: %f s\nBodies: %d\nFPS: %d",
