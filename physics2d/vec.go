@@ -91,6 +91,10 @@ func (v Vec2) Perpendicular() Vec2 {
 	return NewVec2(-v.y, v.x)
 }
 
+func Midpoint(v1, v2 Vec2) Vec2 {
+	return NewVec2((v1.x+v2.x)/2, (v1.y+v2.y)/2)
+}
+
 func cmpX(a, b Vec2) int {
 	if a.x > b.x {
 		return 1

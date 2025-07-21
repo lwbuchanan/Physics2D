@@ -26,10 +26,23 @@ func (c *Collision) Resolve() {
 	}
 
 	// We can find accurate collision points now that they are barely touching
-	cp := collisionPoints(c)[0]
-	// If I come back to this, it might be nice have special cases for multiple collision points
+	cps := collisionPoints(c)
+	var cp Vec2
+	if len(cps) > 1 {
+		cp = Midpoint(cps[0], cps[1])
+	} else {
+		cp = cps[0]
+	}
 
-	relativeVelocity := c.b.velocity.Sub(c.a.velocity)
+	rA := cp.Sub(c.a.position)
+	rB := cp.Sub(c.b.position)
+
+	// Cross product is wacky in 2d
+	aCPVel := NewVec2(c.a.velocity.x-rA.y*c.a.rotationalVelocity, c.a.velocity.y+rA.x*c.a.rotationalVelocity)
+	bCPVel := NewVec2(c.b.velocity.x-rB.y*c.b.rotationalVelocity, c.b.velocity.y+rB.x*c.b.rotationalVelocity)
+
+	// Relative velocity should be based on collision point
+	relativeVelocity := bCPVel.Sub(aCPVel)
 	rVelDotNormal := relativeVelocity.Dot(c.normal)
 
 	if rVelDotNormal > 0.0 {
@@ -39,18 +52,18 @@ func (c *Collision) Resolve() {
 
 	e := math.Min(c.a.restitution, c.b.restitution)
 
-	rAP_perp := cp.Sub(c.a.position).Perpendicular()
-	rBP_perp := cp.Sub(c.b.position).Perpendicular()
+	rA_perp := rA.Perpendicular()
+	rB_perp := rB.Perpendicular()
 
 	j := (-(1.0 + e) * rVelDotNormal) / ((c.a.inverseMass + c.b.inverseMass) +
-		(rAP_perp.Dot(c.normal) * rAP_perp.Dot(c.normal) * c.a.inverseMomentOfIntertia) +
-		(rBP_perp.Dot(c.normal) * rBP_perp.Dot(c.normal) * c.b.inverseMomentOfIntertia))
+		(rA_perp.Dot(c.normal) * rA_perp.Dot(c.normal) * c.a.inverseMomentOfIntertia) +
+		(rB_perp.Dot(c.normal) * rB_perp.Dot(c.normal) * c.b.inverseMomentOfIntertia))
 
 	c.a.velocity = c.a.velocity.Add(c.normal.ScaleMult(-j * c.a.inverseMass))
 	c.b.velocity = c.b.velocity.Add(c.normal.ScaleMult(j * c.b.inverseMass))
 
-	c.a.rotationalVelocity += rAP_perp.Dot(c.normal.ScaleMult(-j)) * c.a.inverseMomentOfIntertia
-	c.b.rotationalVelocity += rBP_perp.Dot(c.normal.ScaleMult(j)) * c.b.inverseMomentOfIntertia
+	c.a.rotationalVelocity += rA_perp.Dot(c.normal.ScaleMult(-j)) * c.a.inverseMomentOfIntertia
+	c.b.rotationalVelocity += rB_perp.Dot(c.normal.ScaleMult(j)) * c.b.inverseMomentOfIntertia
 }
 
 func Collide(a, b *Body) (*Collision, error) {

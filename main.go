@@ -34,6 +34,6 @@ func main() {
 }
 
 func createSim() Simulation {
-	return NewFloatingSim()
-	// return NewStackingSim()
+	// return NewFloatingSim()
+	return NewStackingSim()
 }
